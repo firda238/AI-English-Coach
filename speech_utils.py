@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+import wave
 from importlib.util import find_spec
 from typing import BinaryIO, Dict
 
@@ -53,6 +54,7 @@ def transcribe_audio(uploaded_file: BinaryIO) -> Dict:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_audio:
             temp_audio.write(audio_bytes)
             temp_path = temp_audio.name
+        duration_seconds = _audio_duration_seconds(temp_path)
     except Exception as exc:
         return {
             "success": False,
@@ -60,6 +62,8 @@ def transcribe_audio(uploaded_file: BinaryIO) -> Dict:
             "message": f"音频文件读取失败：{exc}",
             "engine": runtime["engine"],
             "audio_bytes": 0,
+            "duration_seconds": None,
+            "words_per_minute": None,
             "confidence_label": "failed",
             "coach_tip": "请重新录制一段更清晰的英文回答，或先使用文本输入。",
         }
@@ -78,8 +82,10 @@ def transcribe_audio(uploaded_file: BinaryIO) -> Dict:
                 "message": "已使用 faster-whisper 完成英文转写。" if text else "未识别到清晰英文内容。",
                 "engine": "faster-whisper",
                 "audio_bytes": len(audio_bytes),
+                "duration_seconds": duration_seconds,
+                "words_per_minute": _words_per_minute(text, duration_seconds),
                 "confidence_label": "usable" if text else "unclear",
-                "coach_tip": _coach_tip_for_transcript(text),
+                "coach_tip": _coach_tip_for_transcript(text, duration_seconds),
             }
         except ImportError:
             pass
@@ -97,8 +103,10 @@ def transcribe_audio(uploaded_file: BinaryIO) -> Dict:
                 "message": "已使用 whisper 完成英文转写。" if text else "未识别到清晰英文内容。",
                 "engine": "whisper",
                 "audio_bytes": len(audio_bytes),
+                "duration_seconds": duration_seconds,
+                "words_per_minute": _words_per_minute(text, duration_seconds),
                 "confidence_label": "usable" if text else "unclear",
-                "coach_tip": _coach_tip_for_transcript(text),
+                "coach_tip": _coach_tip_for_transcript(text, duration_seconds),
             }
         except ImportError:
             return {
@@ -107,6 +115,8 @@ def transcribe_audio(uploaded_file: BinaryIO) -> Dict:
                 "message": "当前未安装 Whisper 语音模型，请安装 faster-whisper 后再进行真实语音识别；文本训练流程不受影响。",
                 "engine": runtime["engine"],
                 "audio_bytes": len(audio_bytes),
+                "duration_seconds": duration_seconds,
+                "words_per_minute": None,
                 "confidence_label": "model_missing",
                 "coach_tip": "比赛演示建议先运行 `pip install faster-whisper`，再用 `WHISPER_MODEL_SIZE=tiny.en streamlit run app.py` 启动。",
             }
@@ -117,6 +127,8 @@ def transcribe_audio(uploaded_file: BinaryIO) -> Dict:
             "message": f"语音转写不可用，已自动降级到文本输入模式：{exc}",
             "engine": runtime["engine"],
             "audio_bytes": len(audio_bytes),
+            "duration_seconds": duration_seconds,
+            "words_per_minute": None,
             "confidence_label": "failed",
             "coach_tip": "请确认音频格式为 wav/mp3/m4a，并尽量录制 5-20 秒清晰英文回答。",
         }
@@ -127,10 +139,37 @@ def transcribe_audio(uploaded_file: BinaryIO) -> Dict:
             pass
 
 
-def _coach_tip_for_transcript(text: str) -> str:
+def _audio_duration_seconds(path: str) -> float | None:
+    """Return WAV duration when it can be read locally."""
+    try:
+        with wave.open(path, "rb") as audio:
+            frame_count = audio.getnframes()
+            frame_rate = audio.getframerate()
+            if frame_rate <= 0:
+                return None
+            return round(frame_count / float(frame_rate), 2)
+    except Exception:
+        return None
+
+
+def _words_per_minute(text: str, duration_seconds: float | None) -> int | None:
+    if not text or not duration_seconds or duration_seconds <= 0:
+        return None
+    words = [word for word in text.split() if word.strip()]
+    if not words:
+        return None
+    return round(len(words) / (duration_seconds / 60))
+
+
+def _coach_tip_for_transcript(text: str, duration_seconds: float | None = None) -> str:
     if not text:
         return "没有识别到清晰英文内容。请靠近麦克风，放慢语速，再录一次。"
     word_count = len(text.split())
+    wpm = _words_per_minute(text, duration_seconds)
+    if wpm is not None and wpm < 80:
+        return "转写成功，但语速偏慢。下一轮可以先想好关键词，再用更连贯的语速回答。"
+    if wpm is not None and wpm > 180:
+        return "转写成功，但语速偏快。下一轮请放慢一点，保证每个关键词清楚。"
     if word_count < 6:
         return "转写成功，但回答偏短。下一轮请补充一个原因或例子。"
     if word_count > 80:

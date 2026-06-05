@@ -459,7 +459,16 @@ def _normalize_api_turn(
             "score": evaluate_speaking(user_text, correction.get("issues", []), audio_used, voice_profile),
         }
     total = round(sum(item["score"] for item in dimensions.values()) / len(dimensions))
-    return {"correction": correction, "score": {"total_score": total, "dimensions": dimensions}}
+    local_score = evaluate_speaking(user_text, correction.get("issues", []), audio_used, voice_profile)
+    return {
+        "correction": correction,
+        "score": {
+            "total_score": total,
+            "dimensions": dimensions,
+            "coach_actions": local_score.get("coach_actions", []),
+            "voice_profile": local_score.get("voice_profile", {}),
+        },
+    }
 
 
 def build_turn_response(

@@ -123,6 +123,7 @@ def render_section_intro(title: str, description: str) -> None:
 
 def render_score(score: dict) -> None:
     total_score = int(score.get("total_score", 0))
+    voice_profile = score.get("voice_profile") or {}
     st.markdown(
         f"""
         <div class="score-total-card" style="background: linear-gradient(135deg, #0f172a, #111f32) !important; color: #f8fafc !important;">
@@ -151,6 +152,22 @@ def render_score(score: dict) -> None:
             """,
             unsafe_allow_html=True,
         )
+    if voice_profile.get("audio_used"):
+        duration = voice_profile.get("duration_seconds")
+        wpm = voice_profile.get("words_per_minute")
+        metric_parts = []
+        if duration:
+            metric_parts.append(f"录音时长：{duration} 秒")
+        if wpm:
+            metric_parts.append(f"估算语速：{wpm} WPM")
+        metric_parts.append(f"识别引擎：{voice_profile.get('engine', 'unknown')}")
+        st.info(" | ".join(metric_parts))
+
+    coach_actions = score.get("coach_actions") or []
+    if coach_actions:
+        st.markdown("**本轮 Coach 训练动作**")
+        for action in coach_actions:
+            st.write(f"- {action}")
 
 
 def render_history_record(record: dict) -> None:

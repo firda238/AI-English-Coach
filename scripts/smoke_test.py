@@ -123,7 +123,16 @@ def main() -> None:
         assert isinstance(error_book.get("errors"), list)
 
         audio_result = transcribe_audio(NamedBytesIO(b"not a real wav file", "demo.wav"))
-        assert {"success", "text", "message", "engine", "confidence_label", "coach_tip"} <= set(audio_result)
+        assert {
+            "success",
+            "text",
+            "message",
+            "engine",
+            "confidence_label",
+            "coach_tip",
+            "duration_seconds",
+            "words_per_minute",
+        } <= set(audio_result)
         assert isinstance(audio_result["success"], bool)
         assert isinstance(audio_result["message"], str)
 

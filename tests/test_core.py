@@ -113,6 +113,28 @@ def test_voice_score_profile_explains_transcription_flow():
     assert score["voice_profile"]["audio_used"] is True
     assert score["voice_profile"]["transcript_success"] is True
     assert "语音识别" in score["dimensions"]["pronunciation"]["explanation"]
+    assert score["coach_actions"]
+
+
+def test_voice_score_uses_speech_rate_metrics():
+    correction = local_correction("I agree because this proposal can reduce cost and improve teamwork.")
+    score = evaluate_speaking(
+        "I agree because this proposal can reduce cost and improve teamwork.",
+        correction["issues"],
+        audio_used=True,
+        voice_profile={
+            "success": True,
+            "engine": "faster-whisper",
+            "confidence_label": "usable",
+            "duration_seconds": 6.0,
+            "words_per_minute": 100,
+        },
+    )
+
+    assert_score_shape(score)
+    assert score["voice_profile"]["duration_seconds"] == 6.0
+    assert score["voice_profile"]["words_per_minute"] == 100
+    assert "100 WPM" in score["dimensions"]["fluency"]["explanation"]
 
 
 def test_api_json_parsing_and_normalization():
@@ -281,7 +303,16 @@ def test_analytics_and_html_report(tmp_path, monkeypatch):
 
 def test_audio_fallback_shape_without_valid_audio():
     result = transcribe_audio(NamedBytesIO(b"not a real wav file", "demo.wav"))
-    assert {"success", "text", "message", "engine", "confidence_label", "coach_tip"} <= set(result)
+    assert {
+        "success",
+        "text",
+        "message",
+        "engine",
+        "confidence_label",
+        "coach_tip",
+        "duration_seconds",
+        "words_per_minute",
+    } <= set(result)
     assert isinstance(result["success"], bool)
     assert isinstance(result["text"], str)
     assert isinstance(result["message"], str)
@@ -293,8 +324,26 @@ def test_recorded_audio_object_can_be_reused_without_crashing():
     first = transcribe_audio(recorded)
     second = transcribe_audio(recorded)
 
-    assert {"success", "text", "message", "engine", "confidence_label", "coach_tip"} <= set(first)
-    assert {"success", "text", "message", "engine", "confidence_label", "coach_tip"} <= set(second)
+    assert {
+        "success",
+        "text",
+        "message",
+        "engine",
+        "confidence_label",
+        "coach_tip",
+        "duration_seconds",
+        "words_per_minute",
+    } <= set(first)
+    assert {
+        "success",
+        "text",
+        "message",
+        "engine",
+        "confidence_label",
+        "coach_tip",
+        "duration_seconds",
+        "words_per_minute",
+    } <= set(second)
     assert isinstance(second["message"], str)
 
 
