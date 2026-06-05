@@ -1,0 +1,14 @@
+.venv/
+.env
+.pytest_cache/
+.playwright-cli/
+__pycache__/
+*.pyc
+.DS_Store
+outputs/*.json
+outputs/*.md
+outputs/*.html
+outputs/*.wav
+outputs/*.mp3
+outputs/*.m4a
+!outputs/.gitkeep

@@ -1,0 +1,27 @@
+{
+  "scenario": "Interview",
+  "difficulty": "中等",
+  "dialogue": [
+    {
+      "user": "I am agree that teamwork is important in a software project",
+      "assistant": "Could you give a specific example to support your answer?"
+    },
+    {
+      "user": "In my previous project, I was responsible for testing and I found many bugs.",
+      "assistant": "That sounds interesting. What was the biggest challenge in that project?"
+    }
+  ],
+  "feedback_example": {
+    "original_sentence": "I am agree that teamwork is important in a software project",
+    "corrected_sentence": "I agree that teamwork is important in a software project.",
+    "issue_explanation": [
+      "'I am agree' is incorrect because 'agree' is a verb.",
+      "End a complete sentence with proper punctuation."
+    ],
+    "natural_expression": "I agree that teamwork is important in a software project. For example, I can explain the reason and expected result more clearly.",
+    "alternative_expressions": [
+      "I agree with this idea.",
+      "Try using linking words such as 'because', 'therefore', or 'for example'."
+    ]
+  }
+}
