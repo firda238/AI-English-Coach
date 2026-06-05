@@ -499,6 +499,204 @@ def render_ai_voice_reply(reply: str) -> None:
     )
 
 
+def render_browser_speech_dictation(disabled: bool = False) -> None:
+    """Render a Chrome Web Speech API helper that writes into the answer box."""
+    disabled_json = json.dumps(disabled)
+    components.html(
+        f"""
+        <div class="dictation-card">
+          <div class="dictation-head">
+            <strong>浏览器听写</strong>
+            <span id="dictation-status">等待开始</span>
+          </div>
+          <div class="dictation-actions">
+            <button id="dictation-start" type="button">开始</button>
+            <button id="dictation-stop" type="button">停止</button>
+            <button id="dictation-write" type="button">写入</button>
+          </div>
+          <div id="dictation-text" class="dictation-text">识别结果会显示在这里。</div>
+          <div class="dictation-help">Chrome 支持时可直接调用浏览器语音识别；若不可用，请使用录音转写或文本输入。</div>
+        </div>
+        <script>
+        const disabled = {disabled_json};
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const statusEl = document.getElementById("dictation-status");
+        const textEl = document.getElementById("dictation-text");
+        const startBtn = document.getElementById("dictation-start");
+        const stopBtn = document.getElementById("dictation-stop");
+        const writeBtn = document.getElementById("dictation-write");
+        let recognition = null;
+        let finalText = "";
+
+        function setStatus(text, state) {{
+            statusEl.textContent = text;
+            statusEl.dataset.state = state || "";
+        }}
+
+        function answerBox() {{
+            return window.parent.document.querySelector('textarea[aria-label="用户英文输入"]');
+        }}
+
+        function writeToStreamlitTextarea(text) {{
+            const target = answerBox();
+            if (!target) {{
+                setStatus("未找到输入框", "error");
+                return false;
+            }}
+            const setter = Object.getOwnPropertyDescriptor(
+                window.parent.HTMLTextAreaElement.prototype,
+                "value"
+            ).set;
+            setter.call(target, text);
+            target.dispatchEvent(new Event("input", {{ bubbles: true }}));
+            target.dispatchEvent(new Event("change", {{ bubbles: true }}));
+            target.focus();
+            setStatus("已写入输入框", "ok");
+            return true;
+        }}
+
+        function updateButtons(isListening) {{
+            startBtn.disabled = disabled || !SpeechRecognition || isListening;
+            stopBtn.disabled = disabled || !SpeechRecognition || !isListening;
+            writeBtn.disabled = disabled || !finalText.trim();
+        }}
+
+        if (disabled) {{
+            setStatus("请先开始练习", "error");
+            updateButtons(false);
+        }} else if (!SpeechRecognition) {{
+            setStatus("当前浏览器不支持", "error");
+            updateButtons(false);
+        }} else {{
+            recognition = new SpeechRecognition();
+            recognition.lang = "en-US";
+            recognition.interimResults = true;
+            recognition.continuous = true;
+
+            recognition.onstart = () => {{
+                setStatus("正在听写", "active");
+                updateButtons(true);
+            }};
+            recognition.onresult = (event) => {{
+                let interimText = "";
+                for (let i = event.resultIndex; i < event.results.length; i += 1) {{
+                    const transcript = event.results[i][0].transcript.trim();
+                    if (event.results[i].isFinal) {{
+                        finalText = `${{finalText}} ${{transcript}}`.trim();
+                    }} else {{
+                        interimText = transcript;
+                    }}
+                }}
+                textEl.textContent = [finalText, interimText].filter(Boolean).join(" ");
+                writeBtn.disabled = !finalText.trim();
+            }};
+            recognition.onerror = (event) => {{
+                setStatus(event.error === "not-allowed" ? "麦克风未授权" : `识别错误：${{event.error}}`, "error");
+                updateButtons(false);
+            }};
+            recognition.onend = () => {{
+                if (finalText.trim()) {{
+                    writeToStreamlitTextarea(finalText.trim());
+                }}
+                setStatus(finalText.trim() ? "听写完成" : "已停止", finalText.trim() ? "ok" : "");
+                updateButtons(false);
+            }};
+            setStatus("可用", "ok");
+            updateButtons(false);
+        }}
+
+        startBtn.addEventListener("click", () => {{
+            if (!recognition) return;
+            finalText = "";
+            textEl.textContent = "正在听写...";
+            recognition.start();
+        }});
+        stopBtn.addEventListener("click", () => {{
+            if (recognition) recognition.stop();
+        }});
+        writeBtn.addEventListener("click", () => {{
+            if (finalText.trim()) writeToStreamlitTextarea(finalText.trim());
+        }});
+        </script>
+        <style>
+        .dictation-card {{
+            box-sizing: border-box;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #26364a;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #0f172a, #112033);
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }}
+        .dictation-head {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }}
+        .dictation-head strong {{
+            font-size: 13px;
+            white-space: nowrap;
+        }}
+        #dictation-status {{
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 700;
+        }}
+        #dictation-status[data-state="ok"] {{ color: #4ade80; }}
+        #dictation-status[data-state="active"] {{ color: #38bdf8; }}
+        #dictation-status[data-state="error"] {{ color: #f59e0b; }}
+        .dictation-actions {{
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 7px;
+        }}
+        .dictation-actions button {{
+            border: 1px solid #334155;
+            border-radius: 9px;
+            padding: 8px 6px;
+            background: #0b1220;
+            color: #f8fafc;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }}
+        .dictation-actions button:first-child {{
+            background: #ef4444;
+            border-color: #ef4444;
+        }}
+        .dictation-actions button:disabled {{
+            opacity: 0.45;
+            cursor: not-allowed;
+        }}
+        .dictation-text {{
+            margin-top: 9px;
+            min-height: 34px;
+            padding: 9px;
+            border: 1px solid #243244;
+            border-radius: 9px;
+            background: #0b1220;
+            color: #e2e8f0;
+            font-size: 12px;
+            line-height: 1.45;
+        }}
+        .dictation-help {{
+            margin-top: 7px;
+            color: #94a3b8;
+            font-size: 11px;
+            line-height: 1.45;
+        }}
+        </style>
+        """,
+        height=205,
+    )
+
+
 def render_history_tab() -> None:
     render_section_intro("历史记录管理", "筛选、查看、下载或删除每一次练习记录。")
     files = list_all_history_files()
@@ -855,7 +1053,7 @@ def configure_browser_behavior() -> None:
         }
         .voice-lab-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: minmax(0, 1fr);
             gap: 8px;
         }
         .voice-lab-grid div {
@@ -1106,6 +1304,10 @@ def main() -> None:
                     help="使用浏览器 SpeechSynthesis 朗读 AI 的最新追问。",
                 )
                 render_voice_lab_status()
+                render_browser_speech_dictation(
+                    disabled=not st.session_state.session_started
+                    or st.session_state.current_round >= MAX_TRAINING_ROUNDS
+                )
                 recorded_audio = st.audio_input(
                     "录制英文回答",
                     key="recorded_answer",
