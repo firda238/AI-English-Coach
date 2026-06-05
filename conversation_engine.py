@@ -62,6 +62,7 @@ def process_user_turn(
     conversation_history: List[Dict],
     current_round: int,
     audio_used: bool = False,
+    voice_profile: Dict | None = None,
 ) -> Dict:
     """Generate one full user-answer turn: follow-up, correction, and score."""
     stage = get_stage(scenario_key, current_round)
@@ -72,6 +73,7 @@ def process_user_turn(
         difficulty,
         conversation_history,
         audio_used=audio_used,
+        voice_profile=voice_profile,
         stage=stage,
         next_stage=next_stage,
     )

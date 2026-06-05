@@ -9,14 +9,14 @@ AI-English-Coach 是一个面向比赛项目的英语口语陪练 V1.0 完整版
 - 场景选择：面试 Interview、点餐 Restaurant Ordering、会议 Business Meeting
 - 难度选择：简单、中等、困难
 - 英文文本对话练习
-- 录音回答：使用 Streamlit 内置录音控件录一段英文后转写并提交
+- Coach Voice Lab：录音或上传音频后自动转写，成功后可一键提交进入下一轮 AI 追问
 - 音频文件上传：支持 wav、mp3、m4a
-- 可选 Whisper / faster-whisper 转写
+- 可选 Whisper / faster-whisper 转写，并在页面显示当前识别引擎状态
 - AI 追问浏览器朗读：使用 SpeechSynthesis 播放最新 AI 追问
 - API 模式与本地演示模式自动切换
 - 场景化 AI 角色扮演回复
 - 规则化语法纠错和表达优化
-- 五维口语评分：Pronunciation、Fluency、Grammar、Expression、Completeness
+- 五维口语评分：Pronunciation、Fluency、Grammar、Expression、Completeness；语音回答会记录转写引擎和识别状态
 - 课后总结生成
 - Markdown 总结导出
 - JSON 练习历史保存到 `outputs/`
@@ -79,6 +79,12 @@ pip install openai-whisper
 WHISPER_MODEL_SIZE=tiny.en python scripts/test_transcription.py
 ```
 
+比赛演示建议使用较轻的 `tiny.en` 模型，首次运行会下载模型文件：
+
+```bash
+WHISPER_MODEL_SIZE=tiny.en streamlit run app.py
+```
+
 ## 运行命令
 
 ```bash
@@ -102,6 +108,20 @@ http://localhost:8501
 - 使用启发式算法生成五维评分
 - 使用模板生成课后总结
 - 音频模型不可用时提示用户使用文本输入
+- 页面会显示语音识别引擎状态；未安装模型时仍可完整完成文本对话训练
+
+### 语音教练闭环
+
+当前版本采用稳定的“录音提交式”语音交互：
+
+1. AI 主动提出场景问题，并可由浏览器自动朗读；
+2. 用户点击录音控件回答英文；
+3. 系统优先使用 `faster-whisper`，其次使用 `whisper` 转写英文；
+4. 转写成功后可自动填入输入框或直接提交；
+5. AI 根据回答继续追问，并生成纠错、表达优化、跟读句和五维评分；
+6. Pronunciation 分数会标注语音识别状态，但未接入音素级发音评测服务时仍属于本地模拟评分。
+
+这不是全双工实时通话系统，但已经能完成比赛演示所需的“识别我的语音并继续交流”的核心流程。
 
 本地演示模式无需额外 API 花销，适合比赛展示和截图。
 

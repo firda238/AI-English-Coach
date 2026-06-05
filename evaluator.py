@@ -23,26 +23,32 @@ def evaluate_speaking(
     user_text: str,
     correction_issues: List[str] | None = None,
     audio_used: bool = False,
+    voice_profile: Dict | None = None,
 ) -> Dict:
     """Return five-dimension speaking scores with explanations.
 
     Pronunciation is simulated unless a real pronunciation service is added.
-    The score is still useful for a course demo because it shows how the
-    interface and data flow behave.
+    When audio metadata is available, the score explanation reflects whether
+    the user actually completed the voice-recognition flow.
     """
 
     correction_issues = correction_issues or []
+    voice_profile = voice_profile or {}
     words = re.findall(r"[A-Za-z']+", user_text)
     word_count = len(words)
     sentence_count = max(1, len(re.findall(r"[.!?]", user_text)))
     avg_sentence_len = word_count / sentence_count
+    transcript_success = bool(voice_profile.get("success")) or bool(audio_used and user_text.strip())
+    confidence_label = voice_profile.get("confidence_label", "")
 
     grammar_penalty = min(35, len(correction_issues) * 8)
     length_penalty = 18 if word_count < 8 else 8 if word_count < 15 else 0
     fluency_penalty = 12 if avg_sentence_len < 5 else 0
     expression_penalty = 10 if len(set(w.lower() for w in words)) < max(4, word_count // 2) else 0
 
-    pronunciation = 78 + (6 if audio_used else 0) - (10 if word_count < 5 else 0)
+    audio_bonus = 7 if transcript_success else 0
+    unclear_penalty = 8 if audio_used and confidence_label in {"unclear", "failed"} else 0
+    pronunciation = 76 + audio_bonus - unclear_penalty - (10 if word_count < 5 else 0)
     fluency = 86 - length_penalty - fluency_penalty
     grammar = 90 - grammar_penalty
     expression = 84 - expression_penalty - (6 if word_count < 8 else 0)
@@ -52,11 +58,7 @@ def evaluate_speaking(
         "pronunciation": {
             "label": "Pronunciation 发音清晰度",
             "score": _bounded(pronunciation),
-            "explanation": (
-                "当前未接入真实发音评测，分数为模拟结果；如上传音频，可作为流程演示。"
-                if not audio_used
-                else "已使用音频输入流程，发音分数仍为本地模拟结果。"
-            ),
+            "explanation": _pronunciation_explanation(audio_used, transcript_success, voice_profile),
         },
         "fluency": {
             "label": "Fluency 流利度",
@@ -81,4 +83,23 @@ def evaluate_speaking(
     }
 
     total_score = round(sum(item["score"] for item in scores.values()) / len(scores))
-    return {"total_score": total_score, "dimensions": scores}
+    return {
+        "total_score": total_score,
+        "dimensions": scores,
+        "voice_profile": {
+            "audio_used": audio_used,
+            "transcript_success": transcript_success,
+            "engine": voice_profile.get("engine", "text"),
+            "confidence_label": confidence_label or ("usable" if transcript_success else "text_only"),
+        },
+    }
+
+
+def _pronunciation_explanation(audio_used: bool, transcript_success: bool, voice_profile: Dict) -> str:
+    engine = voice_profile.get("engine", "")
+    if not audio_used:
+        return "本轮使用文本输入，发音分为模拟基准；建议用录音回答触发语音教练流程。"
+    if transcript_success:
+        engine_label = f"（{engine}）" if engine else ""
+        return f"已完成语音识别{engine_label}，系统根据转写成功、回答长度和表达完整度给出本地模拟发音分；尚未接入真实音素级评测。"
+    return "已检测到音频输入，但未成功转写；发音分为保守模拟值，建议重新录制清晰英文回答。"

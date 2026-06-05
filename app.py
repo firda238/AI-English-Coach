@@ -27,7 +27,7 @@ from input_utils import normalize_user_input
 from report_exporter import save_html_report
 from report_generator import generate_lesson_summary
 from scenarios import DIFFICULTIES, get_scenario, list_scenarios, scenario_label
-from speech_utils import SUPPORTED_AUDIO_TYPES, transcribe_audio
+from speech_utils import SUPPORTED_AUDIO_TYPES, get_speech_runtime_status, transcribe_audio
 from storage import (
     delete_practice_record,
     list_all_history_files,
@@ -55,6 +55,7 @@ def init_state() -> None:
         "user_input": "",
         "voice_transcript": "",
         "voice_status": "",
+        "voice_profile": {},
         "last_spoken_reply": "",
         "voice_reply_enabled": True,
         "pending_user_input": "",
@@ -78,6 +79,7 @@ def reset_conversation_state() -> None:
     st.session_state.user_input = ""
     st.session_state.voice_transcript = ""
     st.session_state.voice_status = ""
+    st.session_state.voice_profile = {}
     st.session_state.last_spoken_reply = ""
     st.session_state.pending_user_input = ""
 
@@ -297,10 +299,44 @@ def render_feedback(feedback: dict | None) -> None:
         st.write(f"- {sentence}")
 
 
+def render_voice_lab_status() -> None:
+    """Show speech-recognition readiness and the latest voice coaching state."""
+    runtime = get_speech_runtime_status()
+    status_class = "voice-ready" if runtime["ready"] else "voice-missing"
+    status_text = "可进行真实语音转写" if runtime["ready"] else "未安装本地语音模型"
+    st.markdown(
+        f"""
+        <div class="voice-lab-card {status_class}">
+          <div class="voice-lab-head">
+            <span>Speech Coach</span>
+            <strong>{escape_text(status_text)}</strong>
+          </div>
+          <div class="voice-lab-grid">
+            <div><span>识别引擎</span><strong>{escape_text(runtime["engine"])}</strong></div>
+            <div><span>模型</span><strong>{escape_text(runtime["model_size"])}</strong></div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    profile = st.session_state.get("voice_profile") or {}
+    if profile:
+        st.caption(
+            f"最近语音状态：{profile.get('message', st.session_state.get('voice_status', ''))} "
+            f"| confidence={profile.get('confidence_label', 'unknown')}"
+        )
+        if profile.get("coach_tip"):
+            st.info(profile["coach_tip"])
+    elif not runtime["ready"]:
+        st.caption(f"要启用真实识别：`{runtime['install_hint']}`，建议演示模型 `tiny.en`。")
+
+
 def transcribe_to_input(audio_file, source_label: str = "录音") -> bool:
     """Transcribe an uploaded or recorded audio object into the answer box."""
     result = transcribe_audio(audio_file)
     st.session_state.voice_status = result["message"]
+    st.session_state.voice_profile = result
     if result["success"]:
         st.session_state.voice_transcript = result["text"]
         st.session_state.audio_text = result["text"]
@@ -317,6 +353,7 @@ def submit_user_answer(
     scenario: dict,
     difficulty: str,
     audio_used: bool = False,
+    voice_profile: dict | None = None,
 ) -> bool:
     """Submit one answer through the shared multi-turn conversation flow."""
     if not st.session_state.session_started:
@@ -337,10 +374,17 @@ def submit_user_answer(
         st.session_state.conversation_history,
         st.session_state.current_round,
         audio_used=audio_used,
+        voice_profile=voice_profile,
     )
     turn = result["turn"]
     st.session_state.conversation_history.append(
-        {"role": "user", "content": clean_text, "stage": result["stage"]["title"]}
+        {
+            "role": "user",
+            "content": clean_text,
+            "stage": result["stage"]["title"],
+            "input_mode": "voice" if audio_used else "text",
+            "voice_profile": voice_profile or {},
+        }
     )
     st.session_state.conversation_history.append(
         {"role": "assistant", "content": turn["ai_reply"], "stage": result["next_stage"]["title"]}
@@ -585,8 +629,11 @@ def render_report_tab() -> None:
 def render_settings_tab(mode_label: str) -> None:
     render_section_intro("运行设置与说明", "查看 API、语音转写和自动化测试命令。")
     st.write(f"**当前模式：** {mode_label}")
-    st.write("**语音模式：** 录音提交式语音对话。用户录一段英文回答后转写并提交，AI 追问可由浏览器朗读。")
-    st.write("**语音边界：** 当前不是全双工实时通话；语音失败时文本输入仍是主流程。")
+    speech_status = get_speech_runtime_status()
+    st.write("**项目定位：** 比赛成品原型，重点展示多轮场景训练、语音识别、教练反馈和学习报告。")
+    st.write("**语音模式：** Coach Voice Lab 录音提交式语音对话。用户录一段英文回答后转写并提交，AI 追问可由浏览器朗读。")
+    st.write(f"**语音识别引擎：** {speech_status['engine']}，模型：{speech_status['model_size']}。")
+    st.write("**语音边界：** 当前不是全双工实时通话；Pronunciation 为本地模拟评分，真实音素级评测可作为下一阶段增强。")
     st.write("**API dry-run：** `python scripts/check_api.py`")
     st.write("**API live 测试：** `python scripts/check_api.py --live`")
     st.write("**本地语音转写测试：** `WHISPER_MODEL_SIZE=tiny.en python scripts/test_transcription.py`")
@@ -754,6 +801,57 @@ def configure_browser_behavior() -> None:
         }
         .empty-panel strong {
             color: #f8fafc;
+        }
+        .voice-lab-card {
+            background: linear-gradient(135deg, #0f172a, #112033);
+            border: 1px solid #26364a;
+            border-radius: 14px;
+            padding: 13px 14px;
+            margin: 6px 0 12px;
+            color: #f8fafc;
+        }
+        .voice-lab-card.voice-ready {
+            border-color: rgba(34, 197, 94, 0.48);
+            box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.12);
+        }
+        .voice-lab-card.voice-missing {
+            border-color: rgba(245, 158, 11, 0.45);
+            box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.1);
+        }
+        .voice-lab-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .voice-lab-head span,
+        .voice-lab-grid span {
+            color: #9fb0c3;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .voice-lab-head strong {
+            color: #f8fafc;
+            font-size: 13px;
+            text-align: right;
+        }
+        .voice-lab-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .voice-lab-grid div {
+            background: #0b1220;
+            border: 1px solid #26364a;
+            border-radius: 10px;
+            padding: 9px 10px;
+        }
+        .voice-lab-grid strong {
+            display: block;
+            color: #f8fafc;
+            margin-top: 4px;
+            overflow-wrap: anywhere;
         }
         div[data-testid="stTabs"] button[role="tab"] {
             font-weight: 750;
@@ -984,12 +1082,13 @@ def main() -> None:
                 )
 
             with voice_col:
-                st.markdown("**语音回答**")
+                st.markdown("**Coach Voice Lab**")
                 st.toggle(
                     "AI 朗读追问",
                     key="voice_reply_enabled",
                     help="使用浏览器 SpeechSynthesis 朗读 AI 的最新追问。",
                 )
+                render_voice_lab_status()
                 recorded_audio = st.audio_input(
                     "录制英文回答",
                     key="recorded_answer",
@@ -1013,6 +1112,7 @@ def main() -> None:
                             scenario,
                             difficulty,
                             audio_used=True,
+                            voice_profile=st.session_state.voice_profile,
                         )
                         st.rerun()
 
@@ -1039,6 +1139,7 @@ def main() -> None:
                             scenario,
                             difficulty,
                             audio_used=True,
+                            voice_profile=st.session_state.voice_profile,
                         )
                         st.rerun()
 
@@ -1088,7 +1189,7 @@ def main() -> None:
 
             if submitted:
                 clean_text = normalize_user_input(user_text)
-                if submit_user_answer(clean_text, scenario_key, scenario, difficulty, audio_used=False):
+                if submit_user_answer(clean_text, scenario_key, scenario, difficulty, audio_used=False, voice_profile={}):
                     st.rerun()
 
             st.subheader("对话历史")

@@ -23,7 +23,7 @@ from input_utils import is_non_empty_input, normalize_user_input
 from report_exporter import build_html_report, save_html_report
 from report_generator import generate_lesson_summary
 from scenarios import DIFFICULTIES, get_scenario, list_scenarios
-from speech_utils import transcribe_audio
+from speech_utils import get_speech_runtime_status, transcribe_audio
 
 
 class NamedBytesIO(io.BytesIO):
@@ -97,6 +97,22 @@ def test_score_dimension_shape():
     correction = local_correction("He go")
     score = evaluate_speaking("He go", correction["issues"], audio_used=False)
     assert_score_shape(score)
+    assert score["voice_profile"]["audio_used"] is False
+
+
+def test_voice_score_profile_explains_transcription_flow():
+    correction = local_correction("I agree with this proposal because it reduces risk.")
+    score = evaluate_speaking(
+        "I agree with this proposal because it reduces risk.",
+        correction["issues"],
+        audio_used=True,
+        voice_profile={"success": True, "engine": "faster-whisper", "confidence_label": "usable"},
+    )
+
+    assert_score_shape(score)
+    assert score["voice_profile"]["audio_used"] is True
+    assert score["voice_profile"]["transcript_success"] is True
+    assert "语音识别" in score["dimensions"]["pronunciation"]["explanation"]
 
 
 def test_api_json_parsing_and_normalization():
@@ -265,10 +281,11 @@ def test_analytics_and_html_report(tmp_path, monkeypatch):
 
 def test_audio_fallback_shape_without_valid_audio():
     result = transcribe_audio(NamedBytesIO(b"not a real wav file", "demo.wav"))
-    assert set(result) == {"success", "text", "message"}
+    assert {"success", "text", "message", "engine", "confidence_label", "coach_tip"} <= set(result)
     assert isinstance(result["success"], bool)
     assert isinstance(result["text"], str)
     assert isinstance(result["message"], str)
+    assert isinstance(result["coach_tip"], str)
 
 
 def test_recorded_audio_object_can_be_reused_without_crashing():
@@ -276,6 +293,19 @@ def test_recorded_audio_object_can_be_reused_without_crashing():
     first = transcribe_audio(recorded)
     second = transcribe_audio(recorded)
 
-    assert set(first) == {"success", "text", "message"}
-    assert set(second) == {"success", "text", "message"}
+    assert {"success", "text", "message", "engine", "confidence_label", "coach_tip"} <= set(first)
+    assert {"success", "text", "message", "engine", "confidence_label", "coach_tip"} <= set(second)
     assert isinstance(second["message"], str)
+
+
+def test_speech_runtime_status_shape():
+    status = get_speech_runtime_status()
+    assert set(status) == {
+        "ready",
+        "engine",
+        "faster_whisper",
+        "whisper",
+        "model_size",
+        "install_hint",
+    }
+    assert isinstance(status["ready"], bool)

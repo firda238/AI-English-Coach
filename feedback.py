@@ -393,7 +393,12 @@ def _try_openai_turn(
         return None
 
 
-def _normalize_api_turn(user_text: str, api_result: Dict, audio_used: bool = False) -> Dict:
+def _normalize_api_turn(
+    user_text: str,
+    api_result: Dict,
+    audio_used: bool = False,
+    voice_profile: Dict | None = None,
+) -> Dict:
     corrected_sentence = str(api_result.get("corrected_sentence") or user_text).strip() or user_text
     issue_explanation = _coerce_list(
         api_result.get("issue_explanation"),
@@ -451,7 +456,7 @@ def _normalize_api_turn(user_text: str, api_result: Dict, audio_used: bool = Fal
     if not isinstance(raw_scores, dict) or not raw_scores:
         return {
             "correction": correction,
-            "score": evaluate_speaking(user_text, correction.get("issues", []), audio_used),
+            "score": evaluate_speaking(user_text, correction.get("issues", []), audio_used, voice_profile),
         }
     total = round(sum(item["score"] for item in dimensions.values()) / len(dimensions))
     return {"correction": correction, "score": {"total_score": total, "dimensions": dimensions}}
@@ -463,13 +468,14 @@ def build_turn_response(
     difficulty: str,
     history: List[Dict],
     audio_used: bool = False,
+    voice_profile: Dict | None = None,
     stage: Dict | None = None,
     next_stage: Dict | None = None,
 ) -> Dict:
     """Build AI reply, correction feedback, and score for one user turn."""
     api_result = _try_openai_turn(user_text, scenario, difficulty, history, audio_used, stage, next_stage)
     if api_result:
-        normalized = _normalize_api_turn(user_text, api_result, audio_used)
+        normalized = _normalize_api_turn(user_text, api_result, audio_used, voice_profile)
         return {
             "mode": "API 模式",
             "ai_reply": api_result["ai_reply"],
@@ -482,5 +488,5 @@ def build_turn_response(
         "mode": "本地演示模式",
         "ai_reply": local_ai_reply(user_text, scenario, difficulty, history, stage, next_stage),
         "correction": correction,
-        "score": evaluate_speaking(user_text, correction.get("issues", []), audio_used),
+        "score": evaluate_speaking(user_text, correction.get("issues", []), audio_used, voice_profile),
     }
