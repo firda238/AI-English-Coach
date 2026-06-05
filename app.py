@@ -876,6 +876,70 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
     )
 
 
+def render_voice_tools_panel(
+    disabled: bool,
+    scenario_key: str,
+    scenario: dict,
+    difficulty: str,
+) -> None:
+    """Render secondary voice tools in the right utility rail."""
+    st.markdown(
+        """
+        <div class="coach-analysis-card coach-voice-tools-card">
+          <h3>语音工具</h3>
+          <p>辅助输入放在右侧，不占用主聊天区。</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    dictation_col, upload_col = st.columns([1, 1])
+    with dictation_col:
+        if hasattr(st, "popover"):
+            with st.popover("听写"):
+                render_browser_speech_dictation(disabled=disabled)
+        else:
+            with st.expander("听写", expanded=False):
+                render_browser_speech_dictation(disabled=disabled)
+    with upload_col:
+        if hasattr(st, "popover"):
+            upload_context = st.popover("上传")
+        else:
+            upload_context = st.expander("上传", expanded=False)
+        with upload_context:
+            uploaded_file = st.file_uploader(
+                "上传音频文件",
+                type=SUPPORTED_AUDIO_TYPES,
+                help="支持 wav、mp3、m4a。本地语音模型不可用时会保留文本输入主流程。",
+                key="right_uploaded_audio",
+            )
+            file_col1, file_col2 = st.columns([1, 1])
+            if file_col1.button(
+                "转文字",
+                width="stretch",
+                disabled=uploaded_file is None,
+                key="right_transcribe_file",
+            ):
+                if transcribe_to_input(uploaded_file, "音频文件"):
+                    st.session_state.input_mode = "text"
+                st.rerun()
+            if file_col2.button(
+                "提交",
+                width="stretch",
+                disabled=uploaded_file is None or disabled,
+                key="right_submit_file",
+            ):
+                if transcribe_to_input(uploaded_file, "音频文件"):
+                    submit_user_answer(
+                        normalize_user_input(st.session_state.voice_transcript),
+                        scenario_key,
+                        scenario,
+                        difficulty,
+                        audio_used=True,
+                        voice_profile=st.session_state.voice_profile,
+                    )
+                    st.rerun()
+
+
 def render_history_tab() -> None:
     render_section_intro("历史记录管理", "筛选、查看、下载或删除每一次练习记录。")
     files = list_all_history_files()
@@ -1443,6 +1507,7 @@ def main() -> None:
     average = average_score(st.session_state.score_history) if st.session_state.score_history else None
 
     if st.session_state.active_view == "practice":
+        round_full = st.session_state.current_round >= MAX_TRAINING_ROUNDS
         with right:
             render_analysis_panel(
                 st.session_state.last_ai_reply,
@@ -1452,6 +1517,12 @@ def main() -> None:
                 average,
             )
             render_ai_voice_reply(st.session_state.last_ai_reply)
+            render_voice_tools_panel(
+                disabled=not st.session_state.session_started or round_full,
+                scenario_key=scenario_key,
+                scenario=scenario,
+                difficulty=difficulty,
+            )
 
         with center:
             render_chat_status_bar(
@@ -1488,7 +1559,6 @@ def main() -> None:
 
             render_chat_history(st.session_state.conversation_history, height=312)
 
-            round_full = st.session_state.current_round >= MAX_TRAINING_ROUNDS
             render_input_header(round_full, st.session_state.get("recording_status") or st.session_state.get("voice_status", ""))
 
             if st.session_state.pending_user_input:
@@ -1561,36 +1631,6 @@ def main() -> None:
                         or round_full,
                     ):
                         if transcribe_to_input(recorded_audio, "录音"):
-                            submit_user_answer(
-                                normalize_user_input(st.session_state.voice_transcript),
-                                scenario_key,
-                                scenario,
-                                difficulty,
-                                audio_used=True,
-                                voice_profile=st.session_state.voice_profile,
-                            )
-                            st.rerun()
-
-                with st.expander("更多", expanded=False):
-                    render_browser_speech_dictation(disabled=not st.session_state.session_started or round_full)
-                    uploaded_file = st.file_uploader(
-                        "上传音频文件（可选）",
-                        type=SUPPORTED_AUDIO_TYPES,
-                        help="支持 wav、mp3、m4a。本地语音模型不可用时会保留文本输入主流程。",
-                    )
-                    file_col1, file_col2 = st.columns([1, 1])
-                    if file_col1.button("转写文件", width="stretch", disabled=uploaded_file is None):
-                        if transcribe_to_input(uploaded_file, "音频文件"):
-                            st.session_state.input_mode = "text"
-                        st.rerun()
-                    if file_col2.button(
-                        "转写文件并提交",
-                        width="stretch",
-                        disabled=uploaded_file is None
-                        or not st.session_state.session_started
-                        or round_full,
-                    ):
-                        if transcribe_to_input(uploaded_file, "音频文件"):
                             submit_user_answer(
                                 normalize_user_input(st.session_state.voice_transcript),
                                 scenario_key,

@@ -1173,6 +1173,16 @@ def inject_chat_shell_css() -> None:
             background: color-mix(in srgb, var(--coach-panel-2) 80%, transparent) !important;
             color: var(--coach-muted) !important;
         }}
+        .coach-voice-tools-card {{
+            margin-top: 8px !important;
+            max-height: 76px !important;
+            overflow: hidden !important;
+        }}
+        .coach-voice-tools-card p {{
+            color: var(--coach-muted) !important;
+            font-size: 10.5px !important;
+            line-height: 1.2 !important;
+        }}
         </style>
         """,
         unsafe_allow_html=True,
