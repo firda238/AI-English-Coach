@@ -256,11 +256,14 @@ AI-English-Coach/
 pytest -q
 python scripts/smoke_test.py
 python scripts/check_api.py
+python scripts/verify_delivery.py
 ```
 
-自检覆盖三类场景、本地 AI 回复、纠错反馈、五维评分、练习进度、课后总结、JSON 保存更新、历史删除、学习统计、HTML 报告导出和音频转写降级返回。
+自检覆盖三类场景、本地 AI 回复、纠错反馈、五维评分、练习进度、课后总结、JSON 保存更新、历史删除、学习统计、HTML 报告导出、音频转写降级返回和交付截图/文档存在性。
 
 `scripts/check_api.py` 默认只做无花销 dry run，不会发送真实 API 请求。只有显式执行 `python scripts/check_api.py --live` 才会调用 API。
+
+仓库提供 GitHub Actions 模板：`docs/github_actions_ci.yml`。如果当前 GitHub 授权具备 `workflow` 权限，可复制到 `.github/workflows/ci.yml` 启用在线 CI。
 
 建议按以下测试用例验证：
 
