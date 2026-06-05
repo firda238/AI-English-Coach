@@ -397,6 +397,23 @@ def transcribe_to_input(audio_file, source_label: str = "录音") -> bool:
     return False
 
 
+def consume_enter_submit_text() -> str:
+    """Read and clear text submitted through the Enter-key browser bridge."""
+    try:
+        text = st.query_params.get("coach_enter_submit", "")
+    except Exception:
+        return ""
+    if isinstance(text, list):
+        text = text[0] if text else ""
+    text = str(text or "")
+    if text:
+        try:
+            del st.query_params["coach_enter_submit"]
+        except Exception:
+            pass
+    return text
+
+
 def build_latest_suggestion(feedback: dict | None, lesson: dict, scenario: dict) -> dict:
     """Build a compact current-round learning suggestion for the right panel."""
     step = lesson.get("current_step", {})
@@ -877,6 +894,48 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
     )
 
 
+def render_enter_submit_bridge() -> None:
+    """Submit the text answer with Enter while preserving click-submit behavior."""
+    components.html(
+        """
+        <script>
+        function bindEnterSubmit() {
+            const doc = window.parent.document;
+            const answerInput =
+                doc.querySelector('input[aria-label="用户英文输入"]') ||
+                doc.querySelector('textarea[aria-label="用户英文输入"]');
+            if (!answerInput || answerInput.dataset.coachEnterBound === "1") return;
+            answerInput.dataset.coachEnterBound = "1";
+            answerInput.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter" || event.shiftKey) return;
+                event.preventDefault();
+                const currentValue = answerInput.value || "";
+                if (!currentValue.trim()) return;
+                const url = new URL(window.parent.location.href);
+                url.searchParams.set("coach_enter_submit", currentValue);
+                window.parent.history.replaceState(null, "", url.toString());
+                window.parent.setTimeout(() => {
+                    const sendButton = [...doc.querySelectorAll("button")].find((button) =>
+                        button.innerText.trim() === "发送" &&
+                        !button.disabled &&
+                        button.getBoundingClientRect().width > 0 &&
+                        button.getBoundingClientRect().height > 0
+                    );
+                    if (sendButton) sendButton.click();
+                }, 140);
+            });
+        }
+        bindEnterSubmit();
+        window.parent.requestAnimationFrame(bindEnterSubmit);
+        window.parent.setTimeout(bindEnterSubmit, 250);
+        window.parent.setTimeout(bindEnterSubmit, 800);
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
 def render_voice_tools_panel(
     disabled: bool,
     scenario_key: str,
@@ -1202,29 +1261,53 @@ def main() -> None:
         if not collapsed:
             render_goal_card(scenario, current_lesson, difficulty, mode_label)
 
-        theme_dark, theme_light = st.columns(2)
-        if theme_dark.button(
-            "☾",
-            key="theme_dark",
-            type="primary" if st.session_state.theme_mode == "dark" else "secondary",
-            width="stretch",
-        ):
-            st.session_state.theme_mode = "dark"
-            st.rerun()
-        if theme_light.button(
-            "☀",
-            key="theme_light",
-            type="primary" if st.session_state.theme_mode == "light" else "secondary",
-            width="stretch",
-        ):
-            st.session_state.theme_mode = "light"
-            st.rerun()
+        if st.session_state.active_view == "practice":
+            side_start, side_demo = st.columns(2)
+            if side_start.button(
+                "开始",
+                type="primary",
+                width="stretch",
+                disabled=st.session_state.session_started,
+                key="side_start_practice",
+            ):
+                start_practice_session(scenario_key, difficulty, session_key)
+                refresh_latest_suggestion(scenario_key, scenario)
+                st.rerun()
+            if side_demo.button("演示", width="stretch", key="side_demo_session"):
+                load_demo_session(scenario_key, scenario, difficulty, session_key)
+                st.rerun()
+            side_summary, side_clear = st.columns(2)
+            can_summarize = st.session_state.current_round >= MIN_SUMMARY_ROUNDS
+            if side_summary.button(
+                "总结",
+                width="stretch",
+                disabled=not can_summarize,
+                key="side_summary",
+            ):
+                if not st.session_state.latest_summary:
+                    generate_current_summary(scenario, difficulty)
+                st.session_state.active_view = "summary"
+                st.rerun()
+            if side_clear.button("清空", width="stretch", key="side_clear"):
+                reset_conversation_state()
+                st.session_state.current_stage_key = session_key
+                refresh_latest_suggestion(scenario_key, scenario)
+                st.rerun()
 
     average = average_score(st.session_state.score_history) if st.session_state.score_history else None
 
     if st.session_state.active_view == "practice":
         round_full = st.session_state.current_round >= MAX_TRAINING_ROUNDS
         with right:
+            _, theme_col = st.columns([0.56, 0.44])
+            with theme_col:
+                st.segmented_control(
+                    "主题",
+                    options=["dark", "light"],
+                    format_func=lambda value: "☾" if value == "dark" else "☀",
+                    key="theme_mode",
+                    label_visibility="collapsed",
+                )
             render_analysis_panel(
                 st.session_state.last_ai_reply,
                 st.session_state.last_feedback,
@@ -1248,32 +1331,8 @@ def main() -> None:
                 MIN_SUMMARY_ROUNDS,
                 st.session_state.session_started,
             )
-            action_start, action_demo, action_summary, action_clear = st.columns([1, 1, 1.05, 1])
-            if action_start.button(
-                "开始",
-                type="primary",
-                width="stretch",
-                disabled=st.session_state.session_started,
-            ):
-                start_practice_session(scenario_key, difficulty, session_key)
-                refresh_latest_suggestion(scenario_key, scenario)
-                st.rerun()
-            if action_demo.button("演示", width="stretch"):
-                load_demo_session(scenario_key, scenario, difficulty, session_key)
-                st.rerun()
-            can_summarize = st.session_state.current_round >= MIN_SUMMARY_ROUNDS
-            if action_summary.button("课后总结", width="stretch", disabled=not can_summarize):
-                if not st.session_state.latest_summary:
-                    generate_current_summary(scenario, difficulty)
-                st.session_state.active_view = "summary"
-                st.rerun()
-            if action_clear.button("清空", width="stretch"):
-                reset_conversation_state()
-                st.session_state.current_stage_key = session_key
-                refresh_latest_suggestion(scenario_key, scenario)
-                st.rerun()
 
-            render_chat_history(st.session_state.conversation_history, height=348)
+            render_chat_history(st.session_state.conversation_history, height=430)
 
             render_input_header(round_full, st.session_state.get("recording_status") or st.session_state.get("voice_status", ""))
 
@@ -1294,13 +1353,14 @@ def main() -> None:
                         st.session_state.input_mode = "voice"
                         st.rerun()
                 with answer_col:
-                    user_text = st.text_area(
+                    user_text = st.text_input(
                         "用户英文输入",
                         key="input_text",
-                        height=64,
-                        placeholder="Type your reply...",
+                        placeholder="输入英文回答，Enter 发送",
                         label_visibility="collapsed",
+                        disabled=not st.session_state.session_started or round_full,
                     )
+                    render_enter_submit_bridge()
                 with send_col:
                     st.toggle(
                         "朗读",
@@ -1357,7 +1417,8 @@ def main() -> None:
                             )
                             st.rerun()
             if submitted:
-                clean_text = normalize_user_input(user_text)
+                bridged_text = consume_enter_submit_text()
+                clean_text = normalize_user_input(bridged_text or user_text)
                 if submit_user_answer(clean_text, scenario_key, scenario, difficulty, audio_used=False, voice_profile={}):
                     st.rerun()
 

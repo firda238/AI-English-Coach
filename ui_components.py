@@ -570,11 +570,11 @@ def inject_chat_shell_css() -> None:
         .block-container {{
             height: 100vh !important;
             max-height: 100vh !important;
-            padding: 0.65rem 0.8rem !important;
+            padding: 0.25rem 0.65rem !important;
             overflow: hidden !important;
         }}
         .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child {{
-            height: calc(100vh - 1.3rem) !important;
+            height: calc(100vh - 0.5rem) !important;
             overflow: hidden !important;
             align-items: stretch !important;
         }}
@@ -625,6 +625,14 @@ def inject_chat_shell_css() -> None:
             border-color: var(--coach-border-strong) !important;
             box-shadow: none !important;
             min-height: 36px !important;
+        }}
+        .stButton > button p,
+        .stDownloadButton > button p,
+        button p {{
+            font-size: 11px !important;
+            line-height: 1 !important;
+            margin: 0 !important;
+            letter-spacing: 0 !important;
         }}
         .stButton > button *,
         .stDownloadButton > button *,
@@ -696,6 +704,7 @@ def inject_chat_shell_css() -> None:
             background: var(--coach-panel-3) !important;
             color: var(--coach-text) !important;
             border-color: var(--coach-border-strong) !important;
+            font-size: 12px !important;
         }}
         textarea {{
             min-height: 58px !important;
@@ -710,6 +719,7 @@ def inject_chat_shell_css() -> None:
         .stSelectbox div[data-baseweb="select"] svg {{
             color: var(--coach-text) !important;
             fill: var(--coach-text) !important;
+            font-size: 12px !important;
         }}
         .stCheckbox label,
         .stCheckbox label span,
@@ -824,8 +834,8 @@ def inject_chat_shell_css() -> None:
             border-radius: 8px !important;
         }}
         .coach-left-rail {{
-            margin-bottom: 6px !important;
-            padding: 12px !important;
+            margin-bottom: 5px !important;
+            padding: 7px !important;
         }}
         .coach-goal-card {{
             margin-top: 6px !important;
@@ -940,15 +950,15 @@ def inject_chat_shell_css() -> None:
             box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14) !important;
         }}
         .coach-brand {{
-            margin-bottom: 10px !important;
+            margin-bottom: 4px !important;
         }}
         .coach-brand-title {{
-            font-size: 15.5px !important;
-            font-weight: 760 !important;
+            font-size: 12.5px !important;
+            font-weight: 730 !important;
             white-space: nowrap !important;
         }}
         .coach-brand-card {{
-            padding: 11px !important;
+            padding: 8px !important;
         }}
         .coach-brand-row {{
             display: flex !important;
@@ -960,8 +970,8 @@ def inject_chat_shell_css() -> None:
             flex: 0 0 auto !important;
         }}
         .coach-status-pill {{
-            padding: 5px 8px !important;
-            font-size: 10.5px !important;
+            padding: 4px 6px !important;
+            font-size: 9px !important;
             border-radius: 999px !important;
         }}
         .coach-control-title {{
@@ -971,7 +981,7 @@ def inject_chat_shell_css() -> None:
             color: var(--coach-muted) !important;
         }}
         .coach-goal-card {{
-            max-height: 86px !important;
+            max-height: 70px !important;
             overflow: hidden !important;
         }}
         .coach-goal-card .coach-stage-head {{
@@ -992,9 +1002,9 @@ def inject_chat_shell_css() -> None:
                 "progress progress" !important;
             gap: 8px 16px !important;
             align-items: center !important;
-            margin-bottom: 8px !important;
-            padding: 11px 13px !important;
-            min-height: 86px !important;
+            margin-bottom: 4px !important;
+            padding: 8px 11px !important;
+            min-height: 62px !important;
             background: color-mix(in srgb, var(--coach-panel) 82%, transparent) !important;
             border: 1px solid color-mix(in srgb, var(--coach-border) 78%, transparent) !important;
             border-radius: 8px !important;
@@ -1009,7 +1019,7 @@ def inject_chat_shell_css() -> None:
         }}
         .coach-topbar-kicker {{
             color: var(--coach-muted) !important;
-            font-size: 10px !important;
+            font-size: 9px !important;
             font-weight: 760 !important;
             letter-spacing: 0 !important;
             text-transform: uppercase !important;
@@ -1018,12 +1028,12 @@ def inject_chat_shell_css() -> None:
         .coach-topbar-title {{
             margin: 0 !important;
             color: var(--coach-text) !important;
-            font-size: 19px !important;
+            font-size: 16px !important;
             font-weight: 760 !important;
             line-height: 1.15 !important;
         }}
         .coach-topbar-main p {{
-            margin: 5px 0 0 !important;
+            margin: 3px 0 0 !important;
             color: var(--coach-muted) !important;
             font-size: 11.5px !important;
             line-height: 1.2 !important;
@@ -1041,8 +1051,8 @@ def inject_chat_shell_css() -> None:
             display: inline-flex !important;
             align-items: center !important;
             max-width: 132px !important;
-            min-height: 24px !important;
-            padding: 5px 8px !important;
+            min-height: 20px !important;
+            padding: 4px 7px !important;
             border: 1px solid var(--coach-border) !important;
             border-radius: 8px !important;
             background: color-mix(in srgb, var(--coach-panel-2) 78%, transparent) !important;
@@ -1076,11 +1086,11 @@ def inject_chat_shell_css() -> None:
         button[kind="primary"],
         button[data-testid="stBaseButton-primary"] {{
             border-radius: 9px !important;
-            font-size: 12px !important;
+            font-size: 10.5px !important;
             font-weight: 690 !important;
-            min-height: 32px !important;
-            padding-top: 6px !important;
-            padding-bottom: 6px !important;
+            min-height: 29px !important;
+            padding-top: 4px !important;
+            padding-bottom: 4px !important;
             transition: transform 120ms ease, border-color 120ms ease, background 120ms ease !important;
         }}
         .stButton > button:hover,
@@ -1105,9 +1115,9 @@ def inject_chat_shell_css() -> None:
             background: color-mix(in srgb, var(--coach-button) 86%, transparent) !important;
         }}
         .stTextArea textarea {{
-            min-height: 54px !important;
-            padding: 12px 13px !important;
-            border-radius: 12px !important;
+            min-height: 42px !important;
+            padding: 9px 12px !important;
+            border-radius: 0 0 13px 13px !important;
             background: color-mix(in srgb, var(--coach-panel-3) 90%, transparent) !important;
             box-shadow: inset 0 1px 0 color-mix(in srgb, var(--coach-text) 7%, transparent) !important;
         }}
@@ -1115,6 +1125,13 @@ def inject_chat_shell_css() -> None:
         input {{
             border-radius: 10px !important;
             background: color-mix(in srgb, var(--coach-panel-3) 86%, transparent) !important;
+        }}
+        .stSelectbox label,
+        .stTextArea label,
+        .stAudioInput label,
+        .stFileUploader label {{
+            font-size: 10.5px !important;
+            line-height: 1.15 !important;
         }}
         [data-testid="stAudioInput"],
         [data-testid="stFileUploader"] {{
@@ -1153,8 +1170,7 @@ def inject_chat_shell_css() -> None:
             background: var(--coach-muted) !important;
         }}
         .coach-input-title {{
-            font-size: 12.5px !important;
-            font-weight: 720 !important;
+            display: none !important;
         }}
         .coach-input-title span {{
             max-width: 70%;
@@ -1267,8 +1283,8 @@ def inject_chat_shell_css() -> None:
             font-size: 10px !important;
         }}
         .coach-voice-tools-card {{
-            margin-top: 8px !important;
-            max-height: 76px !important;
+            margin-top: 6px !important;
+            max-height: 48px !important;
             overflow: hidden !important;
         }}
         .coach-voice-tools-card p {{
@@ -1297,12 +1313,12 @@ def inject_chat_shell_css() -> None:
             -webkit-backdrop-filter: blur(28px) saturate(1.18) !important;
         }}
         .coach-statusbar {{
-            min-height: 78px !important;
-            margin-bottom: 6px !important;
-            padding: 10px 12px !important;
+            min-height: 62px !important;
+            margin-bottom: 4px !important;
+            padding: 8px 11px !important;
         }}
         .coach-topbar-title {{
-            font-size: 18px !important;
+            font-size: 16px !important;
         }}
         .coach-topbar-main p,
         .coach-topbar-meta span {{
@@ -1327,6 +1343,10 @@ def inject_chat_shell_css() -> None:
         button[data-testid="stBaseButton-primary"] {{
             border-radius: 11px !important;
             letter-spacing: 0 !important;
+            height: 28px !important;
+            min-height: 28px !important;
+            padding-top: 3px !important;
+            padding-bottom: 3px !important;
         }}
         .stButton > button[kind="primary"],
         .stDownloadButton > button[kind="primary"],
@@ -1337,12 +1357,20 @@ def inject_chat_shell_css() -> None:
             border-color: color-mix(in srgb, var(--coach-primary) 72%, var(--coach-border)) !important;
         }}
         .stTextArea textarea {{
-            min-height: 52px !important;
-            height: 52px !important;
-            border-radius: 14px !important;
+            min-height: 42px !important;
+            height: 42px !important;
+            border-radius: 0 0 13px 13px !important;
+            border-top-color: transparent !important;
+        }}
+        input[aria-label="用户英文输入"] {{
+            min-height: 42px !important;
+            height: 42px !important;
+            border-radius: 0 0 13px 13px !important;
+            border-top-color: transparent !important;
+            padding: 0 12px !important;
         }}
         .coach-input-shell {{
-            padding: 8px !important;
+            padding: 0 !important;
         }}
         .coach-input-title {{
             margin-bottom: 3px !important;
@@ -1352,7 +1380,8 @@ def inject_chat_shell_css() -> None:
             color: var(--coach-primary-text) !important;
         }}
         .coach-goal-card {{
-            max-height: 98px !important;
+            max-height: 70px !important;
+            padding: 7px !important;
         }}
         .coach-goal-card p {{
             -webkit-line-clamp: 2 !important;
@@ -1363,8 +1392,10 @@ def inject_chat_shell_css() -> None:
             box-shadow: 0 14px 34px rgba(0, 0, 0, 0.14) !important;
         }}
         .coach-insight-detail {{
-            height: 315px !important;
-            margin-top: 7px !important;
+            height: 354px !important;
+            margin-top: 6px !important;
+            overflow-y: auto !important;
+            scrollbar-color: color-mix(in srgb, var(--coach-text) 28%, transparent) transparent !important;
         }}
         .coach-insight-head {{
             display: flex !important;
@@ -1464,10 +1495,10 @@ def inject_chat_shell_css() -> None:
             font-size: 24px !important;
         }}
         div[data-testid="stSegmentedControl"] {{
-            background: var(--coach-panel) !important;
-            border: 1px solid var(--coach-border) !important;
+            background: transparent !important;
+            border: 0 !important;
             border-radius: 12px !important;
-            padding: 4px !important;
+            padding: 0 !important;
             box-shadow: none !important;
         }}
         div[data-testid="stSegmentedControl"] label,
@@ -1476,11 +1507,25 @@ def inject_chat_shell_css() -> None:
             border-radius: 9px !important;
             font-size: 12px !important;
             font-weight: 700 !important;
+            background: transparent !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+            min-height: 28px !important;
+            height: 28px !important;
+        }}
+        div[data-testid="stSegmentedControl"] button p {{
+            font-size: 13px !important;
+            line-height: 1 !important;
+        }}
+        div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+        div[data-testid="stSegmentedControl"] button[aria-selected="true"] {{
+            background: color-mix(in srgb, var(--coach-text) 12%, transparent) !important;
+            border-color: transparent !important;
         }}
         .coach-voice-tools-card {{
-            margin-top: 8px !important;
-            max-height: 58px !important;
-            padding: 9px 10px !important;
+            margin-top: 6px !important;
+            max-height: 48px !important;
+            padding: 8px 9px !important;
         }}
         .coach-voice-tools-card h3 {{
             font-size: 12.5px !important;
@@ -1488,6 +1533,15 @@ def inject_chat_shell_css() -> None:
         }}
         .coach-voice-tools-card p {{
             display: none !important;
+        }}
+        iframe[title="st.iframe"] {{
+            border-radius: 13px 13px 0 0 !important;
+        }}
+        div[data-testid="stTextArea"] {{
+            margin-top: -6px !important;
+        }}
+        div[data-testid="stTextInput"] {{
+            margin-top: -6px !important;
         }}
         </style>
         """,
@@ -1662,10 +1716,11 @@ def render_chat_history(messages: list[dict], height: int = 500) -> None:
         .chat-scroll {{
             height: {height}px;
             overflow-y: auto;
-            padding: 18px 16px;
+            padding: 14px 16px 12px;
             background: {chat_bg};
             border: 1px solid {border_color};
-            border-radius: 12px;
+            border-bottom: 0;
+            border-radius: 13px 13px 0 0;
             scrollbar-color: rgba(148,163,184,0.42) transparent;
             backdrop-filter: blur(24px) saturate(1.25);
             -webkit-backdrop-filter: blur(24px) saturate(1.25);
@@ -1699,7 +1754,7 @@ def render_chat_history(messages: list[dict], height: int = 500) -> None:
         }}
         .bubble {{
             max-width: min(74%, 680px);
-            padding: 12px 13px;
+            padding: 10px 12px;
             border-radius: 13px;
             border: 1px solid {border_color};
             box-shadow: 0 10px 22px rgba(0,0,0,0.10);
@@ -1740,8 +1795,8 @@ def render_chat_history(messages: list[dict], height: int = 500) -> None:
         .content {{
             white-space: pre-wrap;
             overflow-wrap: anywhere;
-            font-size: 14.5px;
-            line-height: 1.58;
+            font-size: 13.5px;
+            line-height: 1.46;
         }}
         .empty-state {{
             height: 100%;
