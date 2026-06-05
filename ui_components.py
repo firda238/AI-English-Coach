@@ -516,20 +516,20 @@ def inject_chat_shell_css() -> None:
     )
     is_light = st.session_state.get("theme_mode") == "light"
     theme = {
-        "bg": "#f5f5f7" if is_light else "#050506",
-        "panel": "rgba(255,255,255,0.64)" if is_light else "rgba(31,31,34,0.58)",
-        "panel_2": "rgba(255,255,255,0.42)" if is_light else "rgba(255,255,255,0.055)",
-        "input": "rgba(255,255,255,0.70)" if is_light else "rgba(255,255,255,0.065)",
-        "border": "rgba(0,0,0,0.10)" if is_light else "rgba(255,255,255,0.11)",
-        "border_strong": "rgba(0,0,0,0.18)" if is_light else "rgba(255,255,255,0.20)",
-        "text": "#111111" if is_light else "#f5f5f7",
-        "muted": "#6b7280" if is_light else "#a3a3a3",
-        "soft": "#303033" if is_light else "#d7d7db",
-        "button": "rgba(255,255,255,0.56)" if is_light else "rgba(255,255,255,0.07)",
-        "button_text": "#111111" if is_light else "#f5f5f7",
-        "primary": "#111111" if is_light else "#f5f5f7",
-        "primary_text": "#ffffff" if is_light else "#09090b",
-        "shadow": "0 18px 48px rgba(0,0,0,0.12)" if is_light else "0 18px 48px rgba(0,0,0,0.42)",
+        "bg": "#e9edf2" if is_light else "#16181d",
+        "panel": "rgba(246,247,249,0.80)" if is_light else "rgba(34,37,44,0.76)",
+        "panel_2": "rgba(226,231,238,0.66)" if is_light else "rgba(58,62,72,0.50)",
+        "input": "rgba(218,224,233,0.78)" if is_light else "rgba(62,66,76,0.58)",
+        "border": "rgba(50,58,68,0.16)" if is_light else "rgba(229,233,240,0.13)",
+        "border_strong": "rgba(50,58,68,0.26)" if is_light else "rgba(229,233,240,0.24)",
+        "text": "#20252d" if is_light else "#e8eaed",
+        "muted": "#66707d" if is_light else "#a7afba",
+        "soft": "#3b4350" if is_light else "#c7cdd6",
+        "button": "rgba(229,234,241,0.76)" if is_light else "rgba(66,70,80,0.62)",
+        "button_text": "#20252d" if is_light else "#e8eaed",
+        "primary": "#687382" if is_light else "#b8c0cc",
+        "primary_text": "#f7f8fa" if is_light else "#20252d",
+        "shadow": "0 18px 44px rgba(66,75,88,0.16)" if is_light else "0 18px 44px rgba(0,0,0,0.28)",
     }
     st.markdown(
         f"""
@@ -1173,6 +1173,99 @@ def inject_chat_shell_css() -> None:
             background: color-mix(in srgb, var(--coach-panel-2) 80%, transparent) !important;
             color: var(--coach-muted) !important;
         }}
+        .coach-insight-panel {{
+            background: color-mix(in srgb, var(--coach-panel) 84%, transparent) !important;
+            border: 1px solid color-mix(in srgb, var(--coach-border) 86%, transparent) !important;
+            border-radius: 10px !important;
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.16) !important;
+            backdrop-filter: blur(24px) saturate(1.18) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(1.18) !important;
+            min-height: 430px !important;
+            overflow: hidden !important;
+        }}
+        .coach-insight-head {{
+            padding: 11px 12px 9px !important;
+            border-bottom: 1px solid var(--coach-border) !important;
+        }}
+        .coach-insight-head h3 {{
+            margin: 0 !important;
+            color: var(--coach-text) !important;
+            font-size: 14px !important;
+            line-height: 1.2 !important;
+        }}
+        .coach-insight-section {{
+            padding: 12px 12px !important;
+            border-bottom: 1px solid color-mix(in srgb, var(--coach-border) 70%, transparent) !important;
+        }}
+        .coach-insight-section:last-child {{
+            border-bottom: 0 !important;
+        }}
+        .coach-insight-section h4 {{
+            margin: 0 0 6px !important;
+            color: var(--coach-text) !important;
+            font-size: 12.5px !important;
+            line-height: 1.2 !important;
+        }}
+        .coach-insight-section p,
+        .coach-insight-section li {{
+            color: var(--coach-soft) !important;
+            font-size: 10.8px !important;
+            line-height: 1.32 !important;
+        }}
+        .coach-insight-section strong {{
+            color: var(--coach-text) !important;
+            font-weight: 760 !important;
+        }}
+        .coach-insight-section p {{
+            margin: 0 !important;
+        }}
+        .coach-insight-section ul {{
+            margin: 0 !important;
+            padding-left: 14px !important;
+        }}
+        .coach-insight-grid {{
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 5px !important;
+        }}
+        .coach-insight-chip {{
+            background: color-mix(in srgb, var(--coach-panel-2) 76%, transparent) !important;
+            border: 1px solid var(--coach-border) !important;
+            border-radius: 8px !important;
+            padding: 5px 6px !important;
+            min-width: 0 !important;
+        }}
+        .coach-insight-chip strong {{
+            display: block !important;
+            color: var(--coach-text) !important;
+            font-size: 10.2px !important;
+            line-height: 1.1 !important;
+        }}
+        .coach-insight-chip span {{
+            display: block !important;
+            color: var(--coach-muted) !important;
+            font-size: 9.2px !important;
+            line-height: 1.18 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            margin-top: 2px !important;
+        }}
+        .coach-insight-total {{
+            display: flex !important;
+            align-items: baseline !important;
+            gap: 7px !important;
+            margin-bottom: 6px !important;
+        }}
+        .coach-insight-total strong {{
+            color: var(--coach-text) !important;
+            font-size: 22px !important;
+            line-height: 1 !important;
+        }}
+        .coach-insight-total span {{
+            color: var(--coach-muted) !important;
+            font-size: 10px !important;
+        }}
         .coach-voice-tools-card {{
             margin-top: 8px !important;
             max-height: 76px !important;
@@ -1278,14 +1371,14 @@ def render_chat_status_bar(
 def render_chat_history(messages: list[dict], height: int = 500) -> None:
     """Render role-aligned chat bubbles inside a fixed-height scroll box."""
     is_light = st.session_state.get("theme_mode") == "light"
-    chat_bg = "rgba(255,255,255,0.40)" if is_light else "rgba(12,15,20,0.54)"
-    assistant_bg = "rgba(255,255,255,0.62)" if is_light else "rgba(255,255,255,0.06)"
-    user_bg = "#111827" if is_light else "#f5f5f7"
-    user_text = "#ffffff" if is_light else "#09090b"
-    user_meta = "rgba(255,255,255,0.70)" if is_light else "rgba(9,9,11,0.52)"
-    text_color = "#111827" if is_light else "#f5f5f7"
-    muted_color = "#667085" if is_light else "#a1a1aa"
-    border_color = "rgba(15,23,42,0.12)" if is_light else "rgba(255,255,255,0.10)"
+    chat_bg = "rgba(235,239,245,0.58)" if is_light else "rgba(28,31,37,0.66)"
+    assistant_bg = "rgba(246,247,249,0.74)" if is_light else "rgba(48,52,61,0.72)"
+    user_bg = "#353b45" if is_light else "#cfd4dd"
+    user_text = "#f6f7f9" if is_light else "#1a1d23"
+    user_meta = "rgba(246,247,249,0.72)" if is_light else "rgba(26,29,35,0.54)"
+    text_color = "#20252d" if is_light else "#e8eaed"
+    muted_color = "#687382" if is_light else "#a8b0bc"
+    border_color = "rgba(50,58,68,0.16)" if is_light else "rgba(229,233,240,0.12)"
     if not messages:
         body = """
           <div class="empty-state">
@@ -1486,10 +1579,77 @@ def render_analysis_panel(
     average: int | None = None,
 ) -> None:
     """Render current-round feedback, score, and learning tips."""
-    _render_ai_followup(ai_reply)
-    _render_feedback_card(feedback)
-    _render_score_card(score)
-    _render_suggestion_card(suggestion)
+    ai_text = esc(_short_text(ai_reply, 136)) if ai_reply else "等待 AI 开场。"
+
+    if feedback:
+        issues = _list_html(feedback.get("issue_explanation", []), limit=1, max_chars=58)
+        alternatives = _list_html(feedback.get("alternative_expressions", []), limit=1, max_chars=58)
+        feedback_html = f"""
+          <p><strong>原句</strong> {esc(_short_text(feedback.get("original_sentence", ""), 54))}</p>
+          <p><strong>修改</strong> {esc(_short_text(feedback.get("corrected_sentence", ""), 54))}</p>
+          <p><strong>原因</strong></p>{issues}
+          <p><strong>替代表达</strong></p>{alternatives}
+        """
+    else:
+        feedback_html = "<p>等待回答后显示纠错和表达优化。</p>"
+
+    if score:
+        total_score = _safe_score(score.get("total_score"))
+        dimensions = score.get("dimensions", {})
+        chips = []
+        for key, fallback_label in DIMENSION_ORDER:
+            item = dimensions.get(key, {})
+            value = _safe_score(item.get("score"))
+            label = str(item.get("label") or fallback_label).split(" ")[0]
+            explanation = "演示发音评分" if key == "pronunciation" else _short_text(item.get("explanation", ""), 24)
+            chips.append(
+                f"""
+                <div class="coach-insight-chip">
+                  <strong>{esc(label)} · {value}</strong>
+                  <span>{esc(explanation)}</span>
+                </div>
+                """
+            )
+        score_html = (
+            f'<div class="coach-insight-total"><strong>{total_score}</strong><span>Overall Score / 100</span></div>'
+            f'<div class="coach-insight-grid">{"".join(chips)}</div>'
+        )
+    else:
+        score_html = "<p>等待评分。</p>"
+
+    if not suggestion:
+        suggestion = {}
+    suggestion_html = f"""
+      <p><strong>主要问题</strong> {esc(_short_text(suggestion.get("main_issue", "等待本轮反馈。"), 58))}</p>
+      <p><strong>跟读句</strong> {esc(_short_text(suggestion.get("practice_sentence", "提交回答后生成跟读句。"), 58))}</p>
+      <p><strong>下一轮</strong> {esc(_short_text(suggestion.get("next_tip", "先回答 AI 当前问题，再补充一个原因或例子。"), 58))}</p>
+    """
+
+    st.html(
+        f"""
+        <div class="coach-insight-panel">
+          <div class="coach-insight-head">
+            <h3>学习分析</h3>
+          </div>
+          <div class="coach-insight-section">
+            <h4>本轮 AI 追问</h4>
+            <p>{ai_text}</p>
+          </div>
+          <div class="coach-insight-section">
+            <h4>纠错反馈</h4>
+            {feedback_html}
+          </div>
+          <div class="coach-insight-section">
+            <h4>五维评分</h4>
+            {score_html}
+          </div>
+          <div class="coach-insight-section">
+            <h4>学习建议</h4>
+            {suggestion_html}
+          </div>
+        </div>
+        """
+    )
 
 
 def render_summary_report(summary: str, scenario_name: str, difficulty: str, round_count: int, overall: int) -> None:
