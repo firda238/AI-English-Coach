@@ -79,6 +79,7 @@ def init_state() -> None:
         "input_text": "",
         "input_mode": "text",
         "recording_status": "",
+        "analysis_view": "correction",
         "latest_suggestion": {},
         "theme_mode": "dark",
         "selected_scenario": default_scene,
@@ -1104,291 +1105,6 @@ def configure_browser_behavior() -> None:
     st.markdown(
         """
         <meta name="google" content="notranslate">
-        <style>
-        :root {
-            --coach-bg: #0b1220;
-            --coach-panel: #101827;
-            --coach-panel-2: #111f32;
-            --coach-border: #243244;
-            --coach-muted: #9fb0c3;
-            --coach-text: #f8fafc;
-            --coach-blue: #38bdf8;
-            --coach-green: #22c55e;
-            --coach-amber: #f59e0b;
-        }
-        .block-container { padding-top: 1.4rem; }
-        .stChatMessage { border: 1px solid #edf0f2; border-radius: 10px; }
-        section[data-testid="stSidebar"] {
-            border-right: 1px solid rgba(148, 163, 184, 0.18);
-        }
-        .coach-hero {
-            display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
-            gap: 18px;
-            background:
-                radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 30%),
-                linear-gradient(135deg, #0f172a, #111827 65%, #0b1220);
-            border: 1px solid #233244;
-            border-radius: 18px;
-            padding: 26px 28px;
-            margin-bottom: 20px;
-            color: var(--coach-text);
-            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
-        }
-        .coach-hero h1 {
-            margin: 4px 0 8px;
-            font-size: 38px;
-            line-height: 1.12;
-            color: #ffffff;
-            letter-spacing: 0;
-        }
-        .coach-hero p {
-            margin: 0;
-            max-width: 720px;
-            color: #cbd5e1;
-            font-size: 15px;
-            line-height: 1.7;
-        }
-        .coach-eyebrow {
-            color: #67e8f9;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0;
-            text-transform: uppercase;
-        }
-        .hero-status-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-        }
-        .hero-status-item {
-            background: rgba(15, 23, 42, 0.82);
-            border: 1px solid rgba(148, 163, 184, 0.22);
-            border-radius: 12px;
-            padding: 12px 14px;
-        }
-        .hero-status-item span,
-        .lesson-prompt-grid span {
-            display: block;
-            color: #94a3b8;
-            font-size: 12px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-        .hero-status-item strong,
-        .lesson-prompt-grid strong {
-            color: #f8fafc;
-            font-size: 15px;
-            line-height: 1.35;
-        }
-        .section-intro {
-            margin: 6px 0 18px;
-        }
-        .section-intro h2 {
-            margin: 0 0 4px;
-            color: #f8fafc;
-            font-size: 25px;
-            line-height: 1.2;
-        }
-        .section-intro p {
-            margin: 0;
-            color: #aebed0;
-            font-size: 14px;
-        }
-        .lesson-card {
-            background: linear-gradient(135deg, #101827, #102033);
-            border: 1px solid #26364a;
-            border-radius: 16px;
-            padding: 18px 20px;
-            margin: 4px 0 18px;
-            color: #e5e7eb;
-        }
-        .lesson-card-head {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
-        }
-        .lesson-card h3 {
-            margin: 3px 0 0;
-            color: #ffffff;
-            font-size: 22px;
-        }
-        .lesson-card-head > strong {
-            color: #f8fafc;
-            background: #0b1220;
-            border: 1px solid #334155;
-            border-radius: 999px;
-            padding: 6px 10px;
-            min-width: 64px;
-            text-align: center;
-        }
-        .lesson-progress-track {
-            height: 9px;
-            background: #0b1220;
-            border: 1px solid #334155;
-            border-radius: 999px;
-            overflow: hidden;
-            margin: 14px 0;
-        }
-        .lesson-progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--coach-blue), var(--coach-green));
-        }
-        .lesson-card p {
-            color: #cbd5e1;
-            margin: 10px 0 14px;
-            line-height: 1.65;
-        }
-        .lesson-prompt-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-        }
-        .lesson-prompt-grid div,
-        .empty-panel {
-            background: #0b1220;
-            border: 1px solid #26364a;
-            border-radius: 12px;
-            padding: 12px 14px;
-        }
-        .empty-panel {
-            color: #cbd5e1;
-            display: grid;
-            gap: 4px;
-        }
-        .empty-panel strong {
-            color: #f8fafc;
-        }
-        .voice-lab-card {
-            background: linear-gradient(135deg, #0f172a, #112033);
-            border: 1px solid #26364a;
-            border-radius: 14px;
-            padding: 13px 14px;
-            margin: 6px 0 12px;
-            color: #f8fafc;
-        }
-        .voice-lab-card.voice-ready {
-            border-color: rgba(34, 197, 94, 0.48);
-            box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.12);
-        }
-        .voice-lab-card.voice-missing {
-            border-color: rgba(245, 158, 11, 0.45);
-            box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.1);
-        }
-        .voice-lab-head {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .voice-lab-head span,
-        .voice-lab-grid span {
-            color: #9fb0c3;
-            font-size: 12px;
-            font-weight: 800;
-        }
-        .voice-lab-head strong {
-            color: #f8fafc;
-            font-size: 13px;
-            text-align: right;
-        }
-        .voice-lab-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr);
-            gap: 8px;
-        }
-        .voice-lab-grid div {
-            background: #0b1220;
-            border: 1px solid #26364a;
-            border-radius: 10px;
-            padding: 9px 10px;
-        }
-        .voice-lab-grid strong {
-            display: block;
-            color: #f8fafc;
-            margin-top: 4px;
-            overflow-wrap: anywhere;
-        }
-        div[data-testid="stTabs"] button[role="tab"] {
-            font-weight: 750;
-            border-radius: 10px 10px 0 0;
-        }
-        .score-total-card {
-            background: linear-gradient(135deg, #0f172a, #111f32) !important;
-            border: 1px solid #475569 !important;
-            border-radius: 12px;
-            padding: 18px 20px;
-            margin: 8px 0 18px;
-            color: #f8fafc !important;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.20);
-        }
-        .score-total-card * {
-            color: inherit !important;
-        }
-        .score-total-label {
-            color: #cbd5e1 !important;
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-        .score-total-value {
-            color: #ffffff !important;
-            font-size: 34px;
-            font-weight: 800;
-            line-height: 1.1;
-            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.22);
-        }
-        .score-dimension-card {
-            background: #0f172a !important;
-            border: 1px solid #334155 !important;
-            border-radius: 10px;
-            padding: 14px 16px;
-            margin: 12px 0;
-            color: #e5e7eb !important;
-        }
-        .score-dimension-head {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            color: #f8fafc !important;
-            font-size: 16px;
-            font-weight: 750;
-            margin-bottom: 10px;
-        }
-        .score-dimension-head span,
-        .score-dimension-head strong {
-            color: #f8fafc !important;
-        }
-        .score-bar-track {
-            height: 9px;
-            background: #1e293b;
-            border-radius: 999px;
-            overflow: hidden;
-            border: 1px solid #334155;
-        }
-        .score-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #38bdf8, #22c55e);
-            border-radius: 999px;
-        }
-        .score-explanation {
-            color: #cbd5e1 !important;
-            font-size: 13px;
-            line-height: 1.5;
-            margin-top: 9px;
-        }
-        @media (max-width: 900px) {
-            .coach-hero,
-            .lesson-prompt-grid {
-                grid-template-columns: 1fr;
-            }
-            .coach-hero h1 {
-                font-size: 30px;
-            }
-        }
-        </style>
         """,
         unsafe_allow_html=True,
     )
@@ -1483,6 +1199,9 @@ def main() -> None:
         current_lesson = stage_progress(scenario_key, st.session_state.current_round)
         refresh_latest_suggestion(scenario_key, scenario)
 
+        if not collapsed:
+            render_goal_card(scenario, current_lesson, difficulty, mode_label)
+
         theme_dark, theme_light = st.columns(2)
         if theme_dark.button(
             "☾",
@@ -1500,9 +1219,6 @@ def main() -> None:
         ):
             st.session_state.theme_mode = "light"
             st.rerun()
-
-        if not collapsed:
-            render_goal_card(scenario, current_lesson, difficulty, mode_label)
 
     average = average_score(st.session_state.score_history) if st.session_state.score_history else None
 
@@ -1557,7 +1273,7 @@ def main() -> None:
                 refresh_latest_suggestion(scenario_key, scenario)
                 st.rerun()
 
-            render_chat_history(st.session_state.conversation_history, height=312)
+            render_chat_history(st.session_state.conversation_history, height=348)
 
             render_input_header(round_full, st.session_state.get("recording_status") or st.session_state.get("voice_status", ""))
 

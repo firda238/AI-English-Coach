@@ -516,20 +516,20 @@ def inject_chat_shell_css() -> None:
     )
     is_light = st.session_state.get("theme_mode") == "light"
     theme = {
-        "bg": "#e9edf2" if is_light else "#16181d",
-        "panel": "rgba(246,247,249,0.80)" if is_light else "rgba(34,37,44,0.76)",
-        "panel_2": "rgba(226,231,238,0.66)" if is_light else "rgba(58,62,72,0.50)",
-        "input": "rgba(218,224,233,0.78)" if is_light else "rgba(62,66,76,0.58)",
-        "border": "rgba(50,58,68,0.16)" if is_light else "rgba(229,233,240,0.13)",
-        "border_strong": "rgba(50,58,68,0.26)" if is_light else "rgba(229,233,240,0.24)",
-        "text": "#20252d" if is_light else "#e8eaed",
-        "muted": "#66707d" if is_light else "#a7afba",
-        "soft": "#3b4350" if is_light else "#c7cdd6",
-        "button": "rgba(229,234,241,0.76)" if is_light else "rgba(66,70,80,0.62)",
-        "button_text": "#20252d" if is_light else "#e8eaed",
-        "primary": "#687382" if is_light else "#b8c0cc",
-        "primary_text": "#f7f8fa" if is_light else "#20252d",
-        "shadow": "0 18px 44px rgba(66,75,88,0.16)" if is_light else "0 18px 44px rgba(0,0,0,0.28)",
+        "bg": "#e6e9ee" if is_light else "#202329",
+        "panel": "rgba(248,249,251,0.72)" if is_light else "rgba(48,52,60,0.68)",
+        "panel_2": "rgba(234,237,242,0.68)" if is_light else "rgba(65,69,78,0.52)",
+        "input": "rgba(224,228,234,0.78)" if is_light else "rgba(70,74,84,0.58)",
+        "border": "rgba(35,40,48,0.13)" if is_light else "rgba(255,255,255,0.13)",
+        "border_strong": "rgba(35,40,48,0.24)" if is_light else "rgba(255,255,255,0.24)",
+        "text": "#252a31" if is_light else "#f0f1f3",
+        "muted": "#6e7783" if is_light else "#b4bac3",
+        "soft": "#414955" if is_light else "#d5d8dd",
+        "button": "rgba(238,241,245,0.72)" if is_light else "rgba(78,82,92,0.58)",
+        "button_text": "#252a31" if is_light else "#f0f1f3",
+        "primary": "#2f343b" if is_light else "#edf0f3",
+        "primary_text": "#f7f8fa" if is_light else "#202329",
+        "shadow": "0 20px 48px rgba(88,96,108,0.14)" if is_light else "0 20px 48px rgba(0,0,0,0.22)",
     }
     st.markdown(
         f"""
@@ -1276,6 +1276,219 @@ def inject_chat_shell_css() -> None:
             font-size: 10.5px !important;
             line-height: 1.2 !important;
         }}
+
+        /* Final glass UI overrides. Keep the practice page calm, neutral, and readable. */
+        .coach-shell-card,
+        .coach-goal-card,
+        .coach-stage-card,
+        .coach-statusbar,
+        .coach-input-shell,
+        .coach-analysis-card,
+        .coach-summary-card,
+        .coach-insight-panel,
+        .voice-lab-card,
+        [data-testid="stAudioInput"],
+        [data-testid="stFileUploader"] {{
+            border-radius: 13px !important;
+            background: var(--coach-panel) !important;
+            border: 1px solid var(--coach-border) !important;
+            box-shadow: var(--coach-shadow) !important;
+            backdrop-filter: blur(28px) saturate(1.18) !important;
+            -webkit-backdrop-filter: blur(28px) saturate(1.18) !important;
+        }}
+        .coach-statusbar {{
+            min-height: 78px !important;
+            margin-bottom: 6px !important;
+            padding: 10px 12px !important;
+        }}
+        .coach-topbar-title {{
+            font-size: 18px !important;
+        }}
+        .coach-topbar-main p,
+        .coach-topbar-meta span {{
+            font-size: 10.5px !important;
+        }}
+        .coach-topbar-meta span {{
+            background: var(--coach-panel-2) !important;
+            border-color: var(--coach-border) !important;
+            max-width: 150px !important;
+        }}
+        .coach-progress-fill,
+        .score-bar-fill,
+        .lesson-progress-fill {{
+            background: color-mix(in srgb, var(--coach-text) 82%, transparent) !important;
+            opacity: 1 !important;
+        }}
+        .stButton > button,
+        .stDownloadButton > button,
+        button[kind="secondary"],
+        button[data-testid="stBaseButton-secondary"],
+        button[kind="primary"],
+        button[data-testid="stBaseButton-primary"] {{
+            border-radius: 11px !important;
+            letter-spacing: 0 !important;
+        }}
+        .stButton > button[kind="primary"],
+        .stDownloadButton > button[kind="primary"],
+        button[kind="primary"],
+        button[data-testid="stBaseButton-primary"] {{
+            background: var(--coach-primary) !important;
+            color: var(--coach-primary-text) !important;
+            border-color: color-mix(in srgb, var(--coach-primary) 72%, var(--coach-border)) !important;
+        }}
+        .stTextArea textarea {{
+            min-height: 52px !important;
+            height: 52px !important;
+            border-radius: 14px !important;
+        }}
+        .coach-input-shell {{
+            padding: 8px !important;
+        }}
+        .coach-input-title {{
+            margin-bottom: 3px !important;
+        }}
+        .coach-collapsed-logo {{
+            background: var(--coach-primary) !important;
+            color: var(--coach-primary-text) !important;
+        }}
+        .coach-goal-card {{
+            max-height: 98px !important;
+        }}
+        .coach-goal-card p {{
+            -webkit-line-clamp: 2 !important;
+        }}
+        .coach-insight-panel {{
+            min-height: 0 !important;
+            overflow: hidden !important;
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.14) !important;
+        }}
+        .coach-insight-detail {{
+            height: 315px !important;
+            margin-top: 7px !important;
+        }}
+        .coach-insight-head {{
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 8px !important;
+            padding: 10px 12px 8px !important;
+            border-bottom: 1px solid var(--coach-border) !important;
+        }}
+        .coach-insight-head h3 {{
+            font-size: 14px !important;
+            font-weight: 760 !important;
+        }}
+        .coach-insight-head span {{
+            color: var(--coach-muted) !important;
+            font-size: 10.5px !important;
+            font-weight: 720 !important;
+        }}
+        .coach-insight-section {{
+            padding: 11px 12px !important;
+            border-bottom: 0 !important;
+        }}
+        .coach-insight-section h4 {{
+            font-size: 12.5px !important;
+            margin-bottom: 7px !important;
+            font-weight: 760 !important;
+        }}
+        .coach-insight-section p,
+        .coach-insight-section li {{
+            color: var(--coach-soft) !important;
+            font-size: 12px !important;
+            line-height: 1.45 !important;
+        }}
+        .coach-insight-field {{
+            margin-top: 10px !important;
+        }}
+        .coach-insight-field:first-child {{
+            margin-top: 0 !important;
+        }}
+        .coach-insight-field span {{
+            display: block !important;
+            color: var(--coach-muted) !important;
+            font-size: 10px !important;
+            font-weight: 760 !important;
+            margin-bottom: 4px !important;
+        }}
+        .coach-insight-field p,
+        .coach-insight-field ul,
+        .coach-insight-field li {{
+            display: block !important;
+            margin: 0 !important;
+            color: var(--coach-soft) !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            white-space: normal !important;
+            -webkit-line-clamp: unset !important;
+            -webkit-box-orient: unset !important;
+        }}
+        .coach-insight-field ul {{
+            padding-left: 15px !important;
+        }}
+        .coach-insight-empty {{
+            min-height: 92px !important;
+            display: grid !important;
+            align-content: center !important;
+            gap: 4px !important;
+        }}
+        .coach-score-lines {{
+            display: grid !important;
+            gap: 8px !important;
+        }}
+        .coach-score-line {{
+            padding: 8px !important;
+            border: 1px solid var(--coach-border) !important;
+            border-radius: 10px !important;
+            background: var(--coach-panel-2) !important;
+        }}
+        .coach-score-line-head {{
+            display: flex !important;
+            justify-content: space-between !important;
+            gap: 8px !important;
+            margin-bottom: 5px !important;
+        }}
+        .coach-score-line-head strong,
+        .coach-score-line-head span {{
+            color: var(--coach-text) !important;
+            font-size: 11px !important;
+            font-weight: 760 !important;
+        }}
+        .coach-score-line p {{
+            margin-top: 5px !important;
+            color: var(--coach-muted) !important;
+            font-size: 10px !important;
+            line-height: 1.28 !important;
+        }}
+        .coach-insight-total strong {{
+            font-size: 24px !important;
+        }}
+        div[data-testid="stSegmentedControl"] {{
+            background: var(--coach-panel) !important;
+            border: 1px solid var(--coach-border) !important;
+            border-radius: 12px !important;
+            padding: 4px !important;
+            box-shadow: none !important;
+        }}
+        div[data-testid="stSegmentedControl"] label,
+        div[data-testid="stSegmentedControl"] button {{
+            color: var(--coach-text) !important;
+            border-radius: 9px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+        }}
+        .coach-voice-tools-card {{
+            margin-top: 8px !important;
+            max-height: 58px !important;
+            padding: 9px 10px !important;
+        }}
+        .coach-voice-tools-card h3 {{
+            font-size: 12.5px !important;
+            margin-bottom: 2px !important;
+        }}
+        .coach-voice-tools-card p {{
+            display: none !important;
+        }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -1371,14 +1584,14 @@ def render_chat_status_bar(
 def render_chat_history(messages: list[dict], height: int = 500) -> None:
     """Render role-aligned chat bubbles inside a fixed-height scroll box."""
     is_light = st.session_state.get("theme_mode") == "light"
-    chat_bg = "rgba(235,239,245,0.58)" if is_light else "rgba(28,31,37,0.66)"
-    assistant_bg = "rgba(246,247,249,0.74)" if is_light else "rgba(48,52,61,0.72)"
-    user_bg = "#353b45" if is_light else "#cfd4dd"
-    user_text = "#f6f7f9" if is_light else "#1a1d23"
-    user_meta = "rgba(246,247,249,0.72)" if is_light else "rgba(26,29,35,0.54)"
-    text_color = "#20252d" if is_light else "#e8eaed"
-    muted_color = "#687382" if is_light else "#a8b0bc"
-    border_color = "rgba(50,58,68,0.16)" if is_light else "rgba(229,233,240,0.12)"
+    chat_bg = "rgba(242,244,247,0.58)" if is_light else "rgba(45,49,57,0.56)"
+    assistant_bg = "rgba(250,251,252,0.72)" if is_light else "rgba(62,66,75,0.68)"
+    user_bg = "#30353d" if is_light else "#e7eaee"
+    user_text = "#f8f9fb" if is_light else "#252a31"
+    user_meta = "rgba(248,249,251,0.72)" if is_light else "rgba(37,42,49,0.56)"
+    text_color = "#252a31" if is_light else "#f0f1f3"
+    muted_color = "#6e7783" if is_light else "#b4bac3"
+    border_color = "rgba(35,40,48,0.13)" if is_light else "rgba(255,255,255,0.13)"
     if not messages:
         body = """
           <div class="empty-state">
@@ -1579,50 +1792,76 @@ def render_analysis_panel(
     average: int | None = None,
 ) -> None:
     """Render current-round feedback, score, and learning tips."""
-    ai_text = esc(_short_text(ai_reply, 136)) if ai_reply else "等待 AI 开场。"
+    ai_text = esc(_short_text(ai_reply, 220)) if ai_reply else "等待 AI 开场。"
+    view_labels = {
+        "correction": "纠错",
+        "score": "评分",
+        "suggestion": "建议",
+    }
+    if st.session_state.get("analysis_view") not in view_labels:
+        st.session_state.analysis_view = "correction"
 
     if feedback:
-        issues = _list_html(feedback.get("issue_explanation", []), limit=1, max_chars=58)
-        alternatives = _list_html(feedback.get("alternative_expressions", []), limit=1, max_chars=58)
+        issues = _list_html(feedback.get("issue_explanation", []), limit=2, max_chars=110)
+        alternatives = _list_html(feedback.get("alternative_expressions", []), limit=2, max_chars=110)
         feedback_html = f"""
-          <p><strong>原句</strong> {esc(_short_text(feedback.get("original_sentence", ""), 54))}</p>
-          <p><strong>修改</strong> {esc(_short_text(feedback.get("corrected_sentence", ""), 54))}</p>
-          <p><strong>原因</strong></p>{issues}
-          <p><strong>替代表达</strong></p>{alternatives}
+          <div class="coach-insight-field"><span>原句</span><p>{esc(_short_text(feedback.get("original_sentence", ""), 160))}</p></div>
+          <div class="coach-insight-field"><span>修改后</span><p>{esc(_short_text(feedback.get("corrected_sentence", ""), 160))}</p></div>
+          <div class="coach-insight-field"><span>错误原因</span>{issues}</div>
+          <div class="coach-insight-field"><span>更自然表达</span><p>{esc(_short_text(feedback.get("natural_expression", ""), 170))}</p></div>
+          <div class="coach-insight-field"><span>替代表达</span>{alternatives}</div>
         """
     else:
-        feedback_html = "<p>等待回答后显示纠错和表达优化。</p>"
+        feedback_html = """
+          <div class="coach-empty coach-insight-empty">
+            <strong>等待回答</strong>
+            <span>提交英文回答后显示原句、修改句、错误原因和自然表达。</span>
+          </div>
+        """
 
     if score:
         total_score = _safe_score(score.get("total_score"))
         dimensions = score.get("dimensions", {})
-        chips = []
+        rows = []
         for key, fallback_label in DIMENSION_ORDER:
             item = dimensions.get(key, {})
             value = _safe_score(item.get("score"))
-            label = str(item.get("label") or fallback_label).split(" ")[0]
-            explanation = "演示发音评分" if key == "pronunciation" else _short_text(item.get("explanation", ""), 24)
-            chips.append(
+            label = str(item.get("label") or fallback_label)
+            explanation = "演示发音评分，非真实音素级评测。" if key == "pronunciation" else _short_text(
+                item.get("explanation", ""), 95
+            )
+            rows.append(
                 f"""
-                <div class="coach-insight-chip">
-                  <strong>{esc(label)} · {value}</strong>
-                  <span>{esc(explanation)}</span>
+                <div class="coach-score-line">
+                  <div class="coach-score-line-head">
+                    <strong>{esc(label)}</strong>
+                    <span>{value}/100</span>
+                  </div>
+                  <div class="coach-progress-track">
+                    <div class="coach-progress-fill" style="width: {value}%;"></div>
+                  </div>
+                  <p>{esc(explanation)}</p>
                 </div>
                 """
             )
         score_html = (
             f'<div class="coach-insight-total"><strong>{total_score}</strong><span>Overall Score / 100</span></div>'
-            f'<div class="coach-insight-grid">{"".join(chips)}</div>'
+            f'<div class="coach-score-lines">{"".join(rows)}</div>'
         )
     else:
-        score_html = "<p>等待评分。</p>"
+        score_html = """
+          <div class="coach-empty coach-insight-empty">
+            <strong>等待评分</strong>
+            <span>完成本轮回答后显示 Overall Score 和五维评分。</span>
+          </div>
+        """
 
     if not suggestion:
         suggestion = {}
     suggestion_html = f"""
-      <p><strong>主要问题</strong> {esc(_short_text(suggestion.get("main_issue", "等待本轮反馈。"), 58))}</p>
-      <p><strong>跟读句</strong> {esc(_short_text(suggestion.get("practice_sentence", "提交回答后生成跟读句。"), 58))}</p>
-      <p><strong>下一轮</strong> {esc(_short_text(suggestion.get("next_tip", "先回答 AI 当前问题，再补充一个原因或例子。"), 58))}</p>
+      <div class="coach-insight-field"><span>主要问题</span><p>{esc(_short_text(suggestion.get("main_issue", "等待本轮反馈。"), 150))}</p></div>
+      <div class="coach-insight-field"><span>跟读句</span><p>{esc(_short_text(suggestion.get("practice_sentence", "提交回答后生成跟读句。"), 150))}</p></div>
+      <div class="coach-insight-field"><span>下一轮提示</span><p>{esc(_short_text(suggestion.get("next_tip", "先回答 AI 当前问题，再补充一个原因或例子。"), 150))}</p></div>
     """
 
     st.html(
@@ -1630,22 +1869,48 @@ def render_analysis_panel(
         <div class="coach-insight-panel">
           <div class="coach-insight-head">
             <h3>学习分析</h3>
+            <span>{esc(average) + "/100" if average is not None else "待评分"}</span>
           </div>
           <div class="coach-insight-section">
             <h4>本轮 AI 追问</h4>
             <p>{ai_text}</p>
           </div>
+        </div>
+        """
+    )
+    if hasattr(st, "segmented_control"):
+        selected = st.segmented_control(
+            "分析视图",
+            options=list(view_labels),
+            format_func=lambda key: view_labels[key],
+            key="analysis_view",
+            label_visibility="collapsed",
+        )
+    else:
+        tab_cols = st.columns(3)
+        selected = st.session_state.analysis_view
+        for col, (view_key, label) in zip(tab_cols, view_labels.items(), strict=True):
+            if col.button(
+                label,
+                key=f"analysis_view_{view_key}",
+                type="primary" if st.session_state.analysis_view == view_key else "secondary",
+                width="stretch",
+            ):
+                st.session_state.analysis_view = view_key
+                selected = view_key
+    selected = selected or st.session_state.get("analysis_view", "correction")
+    detail_map = {
+        "correction": ("纠错反馈", feedback_html),
+        "score": ("五维评分", score_html),
+        "suggestion": ("学习建议", suggestion_html),
+    }
+    title, detail_html = detail_map[selected]
+    st.html(
+        f"""
+        <div class="coach-insight-panel coach-insight-detail">
           <div class="coach-insight-section">
-            <h4>纠错反馈</h4>
-            {feedback_html}
-          </div>
-          <div class="coach-insight-section">
-            <h4>五维评分</h4>
-            {score_html}
-          </div>
-          <div class="coach-insight-section">
-            <h4>学习建议</h4>
-            {suggestion_html}
+            <h4>{esc(title)}</h4>
+            {detail_html}
           </div>
         </div>
         """
