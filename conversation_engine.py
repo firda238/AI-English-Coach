@@ -12,6 +12,30 @@ from feedback import build_turn_response
 MIN_SUMMARY_ROUNDS = 5
 MAX_TRAINING_ROUNDS = 8
 
+DEMO_ANSWERS = {
+    "interview": [
+        "I am a computer science student, and I am interested in software development and English communication.",
+        "In a campus web project, I was responsible for building the front-end page and connecting user data.",
+        "My main responsibility was to make the interface clear and test the important user flows.",
+        "The biggest challenge was limited time, so I divided the work into small tasks and tested each part.",
+        "I believe I am a good fit because I learn quickly and can explain technical ideas clearly.",
+    ],
+    "restaurant": [
+        "Good evening. I do not have a reservation, but I would like a table for two, please.",
+        "I would like to order the chicken salad because I want something light and healthy.",
+        "May I have a glass of water, please? I do not need any other drink for now.",
+        "Could you make it less spicy? I prefer mild food, and I do not have any allergies.",
+        "Yes, that is correct. Thank you for confirming the order.",
+    ],
+    "meeting": [
+        "From my perspective, this proposal is useful because it can improve our project schedule.",
+        "The reason is that the team can focus on the most important tasks first.",
+        "I understand the concern about risk, but we can reduce it by testing the plan with a small group.",
+        "The next step should be assigning one owner and setting a clear deadline for the first version.",
+        "To summarize, we agreed to test the proposal first and review the result next week.",
+    ],
+}
+
 
 def empty_session_state() -> Dict:
     """Return the default Streamlit-compatible conversation state."""
@@ -85,6 +109,65 @@ def process_user_turn(
         "current_round": new_round,
         "current_stage": min(new_round, len(get_course_steps(scenario_key)) - 1),
         "session_completed": new_round >= MIN_SUMMARY_ROUNDS,
+    }
+
+
+def build_demo_session(scenario_key: str, scenario: Dict, difficulty: str) -> Dict:
+    """Build a complete five-round local demonstration session."""
+    conversation_history = [
+        {
+            "role": "assistant",
+            "content": build_opening_question(scenario_key, difficulty),
+            "stage": get_stage(scenario_key, 0)["title"],
+        }
+    ]
+    feedback_history: List[Dict] = []
+    score_history: List[Dict] = []
+    current_round = 0
+
+    for answer in DEMO_ANSWERS[scenario_key][:MIN_SUMMARY_ROUNDS]:
+        result = process_user_turn(
+            answer,
+            scenario_key,
+            scenario,
+            difficulty,
+            conversation_history,
+            current_round,
+            audio_used=False,
+            voice_profile={"engine": "demo", "confidence_label": "demo"},
+        )
+        turn = result["turn"]
+        conversation_history.append(
+            {
+                "role": "user",
+                "content": answer,
+                "stage": result["stage"]["title"],
+                "input_mode": "demo",
+                "voice_profile": {"engine": "demo", "confidence_label": "demo"},
+            }
+        )
+        conversation_history.append(
+            {
+                "role": "assistant",
+                "content": turn["ai_reply"],
+                "stage": result["next_stage"]["title"],
+            }
+        )
+        feedback_history.append(turn["correction"])
+        score_history.append(turn["score"])
+        current_round = result["current_round"]
+
+    return {
+        "conversation_history": conversation_history,
+        "feedback_history": feedback_history,
+        "score_history": score_history,
+        "current_round": current_round,
+        "current_stage": min(current_round, len(get_course_steps(scenario_key)) - 1),
+        "session_started": True,
+        "session_completed": current_round >= MIN_SUMMARY_ROUNDS,
+        "last_feedback": feedback_history[-1] if feedback_history else None,
+        "last_score": score_history[-1] if score_history else None,
+        "last_ai_reply": conversation_history[-1]["content"] if conversation_history else "",
     }
 
 

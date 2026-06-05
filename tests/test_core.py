@@ -11,6 +11,7 @@ from analytics import dimension_averages, error_frequency, filter_records, load_
 from course_plan import get_course_steps, lesson_status, progress_percent
 from conversation_engine import (
     MIN_SUMMARY_ROUNDS,
+    build_demo_session,
     build_opening_question,
     build_session_record,
     empty_session_state,
@@ -230,6 +231,22 @@ def test_conversation_engine_runs_five_rounds(monkeypatch):
     assert record["record_type"] == "multi_turn_session"
     assert record["round_count"] == MIN_SUMMARY_ROUNDS
     assert record["overall_score"] > 0
+
+
+@pytest.mark.parametrize("scenario_key", list_scenarios())
+def test_demo_session_generates_complete_five_rounds(monkeypatch, scenario_key):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    scenario = get_scenario(scenario_key)
+    demo = build_demo_session(scenario_key, scenario, scenario["default_difficulty"])
+
+    assert demo["session_started"]
+    assert demo["session_completed"]
+    assert demo["current_round"] == MIN_SUMMARY_ROUNDS
+    assert len(demo["feedback_history"]) == MIN_SUMMARY_ROUNDS
+    assert len(demo["score_history"]) == MIN_SUMMARY_ROUNDS
+    assert len(history_for_summary(demo["conversation_history"])) == MIN_SUMMARY_ROUNDS
+    assert demo["last_feedback"]
+    assert demo["last_score"]["coach_actions"]
 
 
 def test_summary_and_storage_roundtrip(tmp_path, monkeypatch):

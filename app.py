@@ -15,6 +15,7 @@ from conversation_engine import (
     MAX_TRAINING_ROUNDS,
     MIN_SUMMARY_ROUNDS,
     average_score,
+    build_demo_session,
     build_opening_question,
     build_session_record,
     empty_session_state,
@@ -430,6 +431,58 @@ def submit_user_answer(
     st.session_state.current_record_path = str(record_path)
     st.toast(f"练习记录已保存：{record_path.name}")
     return True
+
+
+def load_demo_session(scenario_key: str, scenario: dict, difficulty: str, session_key: str) -> None:
+    """Populate the UI with a complete five-round demo session."""
+    reset_conversation_state()
+    demo = build_demo_session(scenario_key, scenario, difficulty)
+    st.session_state.current_stage_key = session_key
+    st.session_state.conversation_history = demo["conversation_history"]
+    st.session_state.feedback_history = demo["feedback_history"]
+    st.session_state.score_history = demo["score_history"]
+    st.session_state.current_round = demo["current_round"]
+    st.session_state.current_stage = demo["current_stage"]
+    st.session_state.session_started = demo["session_started"]
+    st.session_state.session_completed = demo["session_completed"]
+    st.session_state.history = history_for_summary(st.session_state.conversation_history)
+    st.session_state.last_feedback = demo["last_feedback"]
+    st.session_state.last_score = demo["last_score"]
+    st.session_state.last_ai_reply = demo["last_ai_reply"]
+
+    combined_feedback = {
+        "issue_explanation": [
+            issue
+            for feedback in st.session_state.feedback_history
+            for issue in feedback.get("issue_explanation", [])
+        ]
+    }
+    combined_score = {"total_score": average_score(st.session_state.score_history)}
+    summary = generate_lesson_summary(
+        st.session_state.history,
+        scenario,
+        difficulty,
+        combined_feedback,
+        combined_score,
+    )
+    st.session_state.latest_summary = summary
+    summary_path = save_markdown_summary(summary)
+    st.session_state.latest_summary_path = str(summary_path)
+
+    record = build_session_record(
+        scenario,
+        difficulty,
+        st.session_state.conversation_history,
+        st.session_state.feedback_history,
+        st.session_state.score_history,
+        summary,
+    )
+    record["demo_session"] = True
+    record_path = save_or_update_practice_record(record, st.session_state.current_session_path)
+    update_error_book(record)
+    st.session_state.current_session_path = str(record_path)
+    st.session_state.current_record_path = str(record_path)
+    st.toast(f"演示会话已生成：{record_path.name}")
 
 
 def render_ai_voice_reply(reply: str) -> None:
@@ -1243,7 +1296,7 @@ def main() -> None:
 
         with center:
             render_section_intro("多轮场景对话", "点击开始后由 AI 主动开场；每次回答后进入下一轮追问。")
-            start_col, clear_col = st.columns([1, 1])
+            start_col, demo_col, clear_col = st.columns([1, 1, 1])
             if start_col.button(
                 "开始练习",
                 type="primary",
@@ -1258,6 +1311,9 @@ def main() -> None:
                 )
                 st.session_state.last_ai_reply = opening
                 st.session_state.session_started = True
+                st.rerun()
+            if demo_col.button("生成演示会话", width="stretch"):
+                load_demo_session(scenario_key, scenario, difficulty, session_key)
                 st.rerun()
             if clear_col.button("清空当前对话", width="stretch"):
                 reset_conversation_state()
