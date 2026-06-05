@@ -1488,7 +1488,6 @@ def main() -> None:
 
             render_chat_history(st.session_state.conversation_history, height=312)
 
-            st.markdown('<div class="coach-input-shell">', unsafe_allow_html=True)
             round_full = st.session_state.current_round >= MAX_TRAINING_ROUNDS
             render_input_header(round_full, st.session_state.get("recording_status") or st.session_state.get("voice_status", ""))
 
@@ -1601,8 +1600,6 @@ def main() -> None:
                                 voice_profile=st.session_state.voice_profile,
                             )
                             st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
-
             if submitted:
                 clean_text = normalize_user_input(user_text)
                 if submit_user_answer(clean_text, scenario_key, scenario, difficulty, audio_used=False, voice_profile={}):

@@ -985,32 +985,78 @@ def inject_chat_shell_css() -> None:
             margin-top: 5px !important;
         }}
         .coach-statusbar {{
-            grid-template-columns: minmax(0, 1fr) minmax(210px, 0.68fr) !important;
-            gap: 8px !important;
-            margin-bottom: 10px !important;
-            align-items: stretch !important;
-        }}
-        .coach-status-main,
-        .coach-status-metric {{
-            min-height: 82px !important;
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) minmax(260px, auto) !important;
+            grid-template-areas:
+                "main meta"
+                "progress progress" !important;
+            gap: 8px 16px !important;
+            align-items: center !important;
+            margin-bottom: 8px !important;
+            padding: 11px 13px !important;
+            min-height: 86px !important;
+            background: color-mix(in srgb, var(--coach-panel) 82%, transparent) !important;
+            border: 1px solid color-mix(in srgb, var(--coach-border) 78%, transparent) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 18px 46px rgba(0, 0, 0, 0.18) !important;
+            backdrop-filter: blur(24px) saturate(1.25) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(1.25) !important;
             overflow: hidden !important;
         }}
-        .coach-status-main h1 {{
+        .coach-topbar-main {{
+            grid-area: main !important;
+            min-width: 0 !important;
+        }}
+        .coach-topbar-kicker {{
+            color: var(--coach-muted) !important;
+            font-size: 10px !important;
+            font-weight: 760 !important;
+            letter-spacing: 0 !important;
+            text-transform: uppercase !important;
+            margin-bottom: 3px !important;
+        }}
+        .coach-topbar-title {{
+            margin: 0 !important;
+            color: var(--coach-text) !important;
             font-size: 19px !important;
             font-weight: 760 !important;
+            line-height: 1.15 !important;
         }}
-        .coach-status-main p {{
+        .coach-topbar-main p {{
+            margin: 5px 0 0 !important;
             color: var(--coach-muted) !important;
-        }}
-        .coach-status-grid {{
-            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-        }}
-        .coach-status-metric span {{
-            font-size: 9.5px !important;
-            letter-spacing: 0 !important;
-        }}
-        .coach-status-metric strong {{
             font-size: 11.5px !important;
+            line-height: 1.2 !important;
+        }}
+        .coach-topbar-meta {{
+            grid-area: meta !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+            min-width: 0 !important;
+        }}
+        .coach-topbar-meta span {{
+            display: inline-flex !important;
+            align-items: center !important;
+            max-width: 132px !important;
+            min-height: 24px !important;
+            padding: 5px 8px !important;
+            border: 1px solid var(--coach-border) !important;
+            border-radius: 8px !important;
+            background: color-mix(in srgb, var(--coach-panel-2) 78%, transparent) !important;
+            color: var(--coach-muted) !important;
+            font-size: 10px !important;
+            font-weight: 720 !important;
+            letter-spacing: 0 !important;
+            line-height: 1 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }}
+        .coach-topbar-progress {{
+            grid-area: progress !important;
         }}
         .coach-progress-track {{
             height: 5px !important;
@@ -1151,7 +1197,7 @@ def render_left_brand(mode_label: str, collapsed: bool) -> None:
         f"""
         <div class="coach-shell-card coach-left-rail coach-brand-card">
           <div class="coach-brand-row">
-            <h1 class="coach-brand-title">AI 英语陪练</h1>
+            <div class="coach-brand-title">AI 英语陪练</div>
             <div class="coach-status-pill">{esc(mode_label)}</div>
           </div>
         </div>
@@ -1198,25 +1244,19 @@ def render_chat_status_bar(
     st.markdown(
         f"""
         <div class="coach-statusbar">
-          <div class="coach-status-main">
-            <h1>{esc(scenario.get("cn_label", ""))}</h1>
+          <div class="coach-topbar-main">
+            <div class="coach-topbar-kicker">Speaking Practice</div>
+            <div class="coach-topbar-title">{esc(scenario.get("cn_label", ""))}</div>
             <p>{esc(step.get("title", ""))} · Round {display_round} / {min_rounds}</p>
+          </div>
+          <div class="coach-topbar-meta">
+            <span>阶段 · {esc(step.get("title", ""))}</span>
+            <span>轮次 · {display_round}/{min_rounds}</span>
+            <span>状态 · {esc(status_text)} · {progress}%</span>
+          </div>
+          <div class="coach-topbar-progress">
             <div class="coach-progress-track">
               <div class="coach-progress-fill" style="width: {progress}%;"></div>
-            </div>
-          </div>
-          <div class="coach-status-grid">
-            <div class="coach-status-metric">
-              <span>阶段</span>
-              <strong>{esc(step.get("title", ""))}</strong>
-            </div>
-            <div class="coach-status-metric">
-              <span>轮次</span>
-              <strong>Round {display_round} / {min_rounds}</strong>
-            </div>
-            <div class="coach-status-metric">
-              <span>状态</span>
-              <strong>{esc(status_text)} · {progress}%</strong>
             </div>
           </div>
         </div>
