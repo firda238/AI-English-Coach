@@ -1,8 +1,40 @@
 # AI-English-Coach
 
-AI-English-Coach 是一个面向比赛项目的英语口语陪练 V1.0 完整版项目。项目使用 Python 和 Streamlit 实现，支持面试、点餐、会议三类场景。用户可以通过英文文本或音频上传进行练习，系统会给出结构化任务、场景化 AI 回复、语法纠错、表达优化、五维评分、课后总结、历史管理和学习统计。
+AI-English-Coach 是一个面向比赛展示的 AI 英语口语陪练系统。项目使用 Python 和 Streamlit 实现，支持面试、点餐、会议三类场景。用户可以通过英文文本、录音或音频文件进行多轮场景对话训练，系统会主动追问、纠正语法和表达、给出五维评分，并生成课后学习报告。
 
-第一版重点是稳定、可本地运行、可截图展示、可写入比赛项目说明。没有 `OPENAI_API_KEY` 时，系统会自动进入本地演示模式，不会因为缺少 API Key、缺少 Whisper 模型或空输入而崩溃。
+项目支持两种运行方式：没有 `OPENAI_API_KEY` 时自动进入本地演示模式，完整跑通核心流程；配置 API Key 后可切换到更自然的 AI 生成模式。第一版重点是稳定、可本地运行、可现场演示、可上传 GitHub 展示。
+
+## 项目界面截图
+
+### 练习中心与语音教练
+
+![AI 英语口语陪练练习中心](outputs/screenshot_voice_lab.png)
+
+### 多轮对话训练界面
+
+![多轮场景对话训练](outputs/screenshot_competition_v1.png)
+
+### 纠错反馈与五维评分
+
+![纠错反馈与评分](outputs/screenshot_feedback_v2.png)
+
+### 历史记录管理
+
+![历史记录管理](outputs/screenshot_competition_history.png)
+
+### 学习统计与报告导出
+
+| 学习统计 | 报告导出 |
+| --- | --- |
+| ![学习统计](outputs/screenshot_competition_stats.png) | ![报告导出](outputs/screenshot_competition_export.png) |
+
+## 项目亮点
+
+- **多轮场景对话**：AI 会根据面试、点餐、会议任务主动开场，并根据用户回答继续追问。
+- **语音教练闭环**：支持录音、音频上传、Whisper / faster-whisper 转写和 AI 追问朗读。
+- **本地可演示**：没有 API Key、没有数据库、没有登录系统也能完整运行。
+- **实时反馈**：每轮回答都会生成纠错、表达优化、替代表达、跟读句和五维评分。
+- **学习沉淀**：自动保存 JSON 历史记录，生成错误本、学习统计和 Markdown / HTML 报告。
 
 ## 功能列表
 
