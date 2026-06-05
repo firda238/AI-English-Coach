@@ -232,7 +232,11 @@ AI-English-Coach/
 │   ├── sample_audio_note.md
 │   └── test_meeting_audio.wav
 ├── outputs/
-│   └── .gitkeep
+│   ├── .gitkeep
+│   ├── screenshot_voice_lab.png
+│   ├── screenshot_browser_dictation.png
+│   ├── screenshot_demo_session.png
+│   └── screenshot_*.png
 └── docs/
     ├── design_report.md
     ├── canva_showcase.html
@@ -315,7 +319,7 @@ https://www.figma.com/design/p7RyLn8dlM23u6Ica8ehsY
 - 支持多轮练习计划和每日任务
 - 支持更稳定的结构化 API 输出
 - 将历史记录迁移到 SQLite 或轻量数据库
-- 增加自动化测试和页面截图测试
+- 增加更多端到端自动化页面截图测试
 
 ## 当前暂停项
 

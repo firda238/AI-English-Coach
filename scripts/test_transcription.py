@@ -24,6 +24,10 @@ def main() -> int:
 
     print(f"success: {result['success']}")
     print(f"message: {result['message']}")
+    print(f"engine: {result.get('engine', 'unknown')}")
+    print(f"duration_seconds: {result.get('duration_seconds')}")
+    print(f"words_per_minute: {result.get('words_per_minute')}")
+    print(f"coach_tip: {result.get('coach_tip', '')}")
     print(f"text: {result['text']}")
     return 0 if result["success"] else 2
 
