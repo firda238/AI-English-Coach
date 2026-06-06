@@ -77,6 +77,7 @@ def init_state() -> None:
         "voice_reply_enabled": True,
         "pending_user_input": "",
         "pending_input_clear": False,
+        "pending_competition_mode": False,
         "sidebar_collapsed": False,
         "active_view": "practice",
         "input_text": "",
@@ -116,6 +117,7 @@ def reset_conversation_state() -> None:
     st.session_state.last_spoken_reply = ""
     st.session_state.pending_user_input = ""
     st.session_state.pending_input_clear = False
+    st.session_state.pending_competition_mode = False
     st.session_state.input_text = ""
     st.session_state.recording_status = ""
     st.session_state.latest_suggestion = {}
@@ -520,6 +522,18 @@ def activate_competition_mode() -> None:
     start_practice_session(scenario_key, difficulty, f"{scenario_key}:{difficulty}")
     refresh_latest_suggestion(scenario_key, get_scenario(scenario_key))
     st.toast("目标模式已启动：面试场景、中等难度、AI 朗读开启。")
+
+
+def request_competition_mode() -> None:
+    """Defer target-mode activation until before widgets are instantiated."""
+    st.session_state.pending_competition_mode = True
+
+
+def apply_pending_competition_mode() -> None:
+    if not st.session_state.get("pending_competition_mode"):
+        return
+    st.session_state.pending_competition_mode = False
+    activate_competition_mode()
 
 
 def generate_current_summary(scenario: dict, difficulty: str) -> None:
@@ -1401,6 +1415,7 @@ def configure_browser_behavior() -> None:
 def main() -> None:
     st.set_page_config(page_title="AI 英语口语陪练", page_icon="🎙️", layout="wide")
     init_state()
+    apply_pending_competition_mode()
     configure_browser_behavior()
     inject_chat_shell_css()
 
@@ -1481,7 +1496,7 @@ def main() -> None:
 
         if st.session_state.active_view == "practice":
             if st.button("目标模式", type="primary", width="stretch", key="side_competition_mode"):
-                activate_competition_mode()
+                request_competition_mode()
                 st.rerun()
             side_start, side_demo = st.columns(2)
             if side_start.button(
