@@ -516,20 +516,22 @@ def inject_chat_shell_css() -> None:
     )
     is_light = st.session_state.get("theme_mode") == "light"
     theme = {
-        "bg": "#e6e9ee" if is_light else "#202329",
-        "panel": "rgba(248,249,251,0.72)" if is_light else "rgba(48,52,60,0.68)",
-        "panel_2": "rgba(234,237,242,0.68)" if is_light else "rgba(65,69,78,0.52)",
-        "input": "rgba(224,228,234,0.78)" if is_light else "rgba(70,74,84,0.58)",
-        "border": "rgba(35,40,48,0.13)" if is_light else "rgba(255,255,255,0.13)",
-        "border_strong": "rgba(35,40,48,0.24)" if is_light else "rgba(255,255,255,0.24)",
-        "text": "#252a31" if is_light else "#f0f1f3",
-        "muted": "#6e7783" if is_light else "#b4bac3",
-        "soft": "#414955" if is_light else "#d5d8dd",
-        "button": "rgba(238,241,245,0.72)" if is_light else "rgba(78,82,92,0.58)",
-        "button_text": "#252a31" if is_light else "#f0f1f3",
-        "primary": "#2f343b" if is_light else "#edf0f3",
-        "primary_text": "#f7f8fa" if is_light else "#202329",
-        "shadow": "0 20px 48px rgba(88,96,108,0.14)" if is_light else "0 20px 48px rgba(0,0,0,0.22)",
+        "bg": "#d9dde3" if is_light else "#070b10",
+        "panel": "rgba(246,247,249,0.78)" if is_light else "rgba(15,22,29,0.82)",
+        "panel_2": "rgba(233,236,240,0.76)" if is_light else "rgba(19,29,38,0.76)",
+        "input": "rgba(225,229,234,0.82)" if is_light else "rgba(8,13,18,0.84)",
+        "border": "rgba(35,40,48,0.11)" if is_light else "rgba(255,255,255,0.085)",
+        "border_strong": "rgba(122,97,45,0.26)" if is_light else "rgba(217,168,79,0.30)",
+        "text": "#20252b" if is_light else "#f2f3f0",
+        "muted": "#6f7780" if is_light else "#87919c",
+        "soft": "#3b444d" if is_light else "#c4ccd3",
+        "button": "rgba(239,241,244,0.78)" if is_light else "rgba(18,27,36,0.88)",
+        "button_text": "#20252b" if is_light else "#e7ecf0",
+        "primary": "#7a612d" if is_light else "#d9a84f",
+        "primary_text": "#fffaf0" if is_light else "#110f09",
+        "accent": "#7a612d" if is_light else "#d9a84f",
+        "accent_soft": "rgba(122,97,45,0.16)" if is_light else "rgba(217,168,79,0.13)",
+        "shadow": "0 20px 48px rgba(66,76,90,0.16)" if is_light else "0 24px 54px rgba(0,0,0,0.34)",
     }
     st.markdown(
         f"""
@@ -548,6 +550,8 @@ def inject_chat_shell_css() -> None:
             --coach-button-text: {theme["button_text"]};
             --coach-primary: {theme["primary"]};
             --coach-primary-text: {theme["primary_text"]};
+            --coach-accent: {theme["accent"]};
+            --coach-accent-soft: {theme["accent_soft"]};
             --coach-shadow: {theme["shadow"]};
         }}
         html,
@@ -1543,6 +1547,331 @@ def inject_chat_shell_css() -> None:
         div[data-testid="stTextInput"] {{
             margin-top: -6px !important;
         }}
+
+        /* AI-Trader inspired terminal finish. */
+        html,
+        body,
+        .stApp {{
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif !important;
+            font-size: 12px !important;
+        }}
+        .stApp::before {{
+            background:
+                radial-gradient(circle at 78% -16%, color-mix(in srgb, var(--coach-accent) 18%, transparent), transparent 31%),
+                radial-gradient(circle at 8% 18%, color-mix(in srgb, var(--coach-text) 7%, transparent), transparent 30%),
+                linear-gradient(135deg, color-mix(in srgb, var(--coach-bg) 92%, #000 8%), var(--coach-bg) 62%, color-mix(in srgb, var(--coach-bg) 88%, var(--coach-accent) 4%)) !important;
+        }}
+        .block-container {{
+            padding: 0.55rem 0.75rem !important;
+        }}
+        .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child {{
+            height: calc(100vh - 1.1rem) !important;
+        }}
+        div[data-testid="column"] > div > div[data-testid="stVerticalBlock"] {{
+            gap: 0.38rem !important;
+        }}
+        h1, h2, h3, h4, h5, h6,
+        p, label, span, div {{
+            letter-spacing: 0 !important;
+        }}
+        .coach-shell-card,
+        .coach-goal-card,
+        .coach-stage-card,
+        .coach-statusbar,
+        .coach-input-shell,
+        .coach-analysis-card,
+        .coach-summary-card,
+        .coach-insight-panel,
+        .voice-lab-card,
+        [data-testid="stAudioInput"],
+        [data-testid="stFileUploader"],
+        div[data-testid="stMetric"] {{
+            border-radius: 16px !important;
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--coach-panel) 94%, var(--coach-text) 3%), var(--coach-panel)) !important;
+            border: 1px solid var(--coach-border) !important;
+            box-shadow: var(--coach-shadow) !important;
+            backdrop-filter: blur(30px) saturate(1.2) !important;
+            -webkit-backdrop-filter: blur(30px) saturate(1.2) !important;
+        }}
+        .coach-left-rail {{
+            margin-bottom: 7px !important;
+            padding: 10px !important;
+            border-radius: 18px !important;
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--coach-panel) 96%, #000 8%), color-mix(in srgb, var(--coach-panel) 88%, #000 10%)) !important;
+            box-shadow: 0 20px 46px rgba(0,0,0,0.24) !important;
+        }}
+        .coach-brand-card {{
+            min-height: 72px !important;
+        }}
+        .coach-brand-row {{
+            align-items: flex-start !important;
+            gap: 9px !important;
+        }}
+        .coach-logo-line {{
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            min-width: 0 !important;
+        }}
+        .coach-logo-mark,
+        .coach-collapsed-logo {{
+            width: 32px !important;
+            height: 32px !important;
+            display: grid !important;
+            place-items: center !important;
+            border-radius: 10px !important;
+            color: var(--coach-primary-text) !important;
+            background: var(--coach-primary) !important;
+            font-size: 11px !important;
+            font-weight: 860 !important;
+            letter-spacing: 0 !important;
+            box-shadow: 0 10px 26px color-mix(in srgb, var(--coach-accent) 28%, transparent) !important;
+        }}
+        .coach-logo-copy {{
+            min-width: 0 !important;
+        }}
+        .coach-brand-title {{
+            color: var(--coach-text) !important;
+            font-size: 13px !important;
+            font-weight: 780 !important;
+            line-height: 1.08 !important;
+            white-space: nowrap !important;
+        }}
+        .coach-brand-subtitle {{
+            margin-top: 4px !important;
+            color: var(--coach-muted) !important;
+            font-size: 9.5px !important;
+            line-height: 1.25 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }}
+        .coach-status-pill {{
+            background: var(--coach-accent-soft) !important;
+            border-color: var(--coach-border-strong) !important;
+            color: color-mix(in srgb, var(--coach-accent) 74%, var(--coach-text)) !important;
+            font-size: 9px !important;
+            font-weight: 760 !important;
+            padding: 4px 6px !important;
+        }}
+        .coach-nav-label,
+        .coach-rail-label {{
+            color: var(--coach-muted) !important;
+            font-size: 9.5px !important;
+            font-weight: 760 !important;
+            text-transform: uppercase !important;
+            margin: 4px 3px 5px !important;
+        }}
+        .coach-mode-card {{
+            margin-top: 7px !important;
+            padding: 8px 9px !important;
+            border: 1px solid var(--coach-border) !important;
+            border-radius: 14px !important;
+            background: color-mix(in srgb, var(--coach-panel-2) 74%, transparent) !important;
+        }}
+        .coach-mode-card strong {{
+            display: block !important;
+            color: var(--coach-text) !important;
+            font-size: 11px !important;
+            line-height: 1.15 !important;
+        }}
+        .coach-mode-card span {{
+            display: block !important;
+            margin-top: 3px !important;
+            color: var(--coach-muted) !important;
+            font-size: 9.5px !important;
+            line-height: 1.2 !important;
+        }}
+        .stButton > button,
+        .stDownloadButton > button,
+        button[kind="secondary"],
+        button[data-testid="stBaseButton-secondary"],
+        button[kind="primary"],
+        button[data-testid="stBaseButton-primary"] {{
+            height: 30px !important;
+            min-height: 30px !important;
+            border-radius: 12px !important;
+            font-size: 11px !important;
+            font-weight: 720 !important;
+            border-color: var(--coach-border) !important;
+            background: color-mix(in srgb, var(--coach-button) 90%, transparent) !important;
+            color: var(--coach-button-text) !important;
+            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--coach-text) 5%, transparent) !important;
+        }}
+        .stButton > button p,
+        .stDownloadButton > button p,
+        button p {{
+            font-size: 11px !important;
+            line-height: 1 !important;
+            font-weight: 720 !important;
+        }}
+        .stButton > button[kind="primary"],
+        .stDownloadButton > button[kind="primary"],
+        button[kind="primary"],
+        button[data-testid="stBaseButton-primary"] {{
+            background: linear-gradient(180deg, color-mix(in srgb, var(--coach-primary) 92%, #fff 8%), var(--coach-primary)) !important;
+            color: var(--coach-primary-text) !important;
+            border-color: color-mix(in srgb, var(--coach-primary) 82%, #fff 12%) !important;
+            box-shadow: 0 10px 24px color-mix(in srgb, var(--coach-primary) 18%, transparent) !important;
+        }}
+        .stButton > button:hover,
+        .stDownloadButton > button:hover,
+        button:hover {{
+            transform: translateY(-1px);
+            border-color: var(--coach-border-strong) !important;
+        }}
+        .stSelectbox label,
+        .stTextArea label,
+        .stAudioInput label,
+        .stFileUploader label,
+        .stCheckbox label {{
+            color: var(--coach-muted) !important;
+            font-size: 10px !important;
+            font-weight: 720 !important;
+        }}
+        .stSelectbox div[data-baseweb="select"] > div,
+        input,
+        textarea {{
+            min-height: 32px !important;
+            border-radius: 12px !important;
+            background: color-mix(in srgb, var(--coach-panel-3) 94%, transparent) !important;
+            border: 1px solid var(--coach-border) !important;
+            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--coach-text) 5%, transparent) !important;
+        }}
+        .coach-goal-card {{
+            padding: 10px !important;
+            max-height: 92px !important;
+            border-radius: 16px !important;
+        }}
+        .coach-goal-card .coach-card-head strong,
+        .coach-stage-head strong {{
+            font-size: 12px !important;
+        }}
+        .coach-goal-card p {{
+            color: var(--coach-muted) !important;
+            font-size: 10.5px !important;
+            line-height: 1.3 !important;
+        }}
+        .coach-statusbar {{
+            min-height: 82px !important;
+            padding: 13px 15px 10px !important;
+            border-radius: 18px 18px 14px 14px !important;
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--coach-panel) 96%, #000 6%), color-mix(in srgb, var(--coach-panel-2) 86%, var(--coach-accent) 3%)) !important;
+            border-color: color-mix(in srgb, var(--coach-border) 86%, var(--coach-accent) 14%) !important;
+        }}
+        .coach-topbar-kicker {{
+            color: var(--coach-accent) !important;
+            font-size: 9.5px !important;
+            font-weight: 800 !important;
+        }}
+        .coach-topbar-title {{
+            color: var(--coach-text) !important;
+            font-size: 19px !important;
+            font-weight: 820 !important;
+            line-height: 1.1 !important;
+        }}
+        .coach-topbar-main p {{
+            color: var(--coach-muted) !important;
+            font-size: 11px !important;
+            margin-top: 5px !important;
+        }}
+        .coach-topbar-meta span {{
+            min-height: 22px !important;
+            max-width: 160px !important;
+            padding: 5px 8px !important;
+            border-radius: 999px !important;
+            background: color-mix(in srgb, var(--coach-panel-2) 80%, transparent) !important;
+            border-color: var(--coach-border) !important;
+            color: var(--coach-muted) !important;
+            font-size: 10px !important;
+        }}
+        .coach-progress-track {{
+            height: 4px !important;
+            background: color-mix(in srgb, var(--coach-text) 8%, transparent) !important;
+            border: 0 !important;
+        }}
+        .coach-progress-fill,
+        .score-bar-fill,
+        .lesson-progress-fill {{
+            background: linear-gradient(90deg, var(--coach-accent), color-mix(in srgb, var(--coach-accent) 74%, var(--coach-text))) !important;
+        }}
+        iframe[title="st.iframe"] {{
+            border-radius: 16px 16px 0 0 !important;
+        }}
+        .coach-input-shell {{
+            border-radius: 0 0 16px 16px !important;
+            background: color-mix(in srgb, var(--coach-panel) 96%, #000 3%) !important;
+            border-top-color: transparent !important;
+            padding: 8px !important;
+        }}
+        .stTextInput input,
+        input[aria-label="用户英文输入"] {{
+            height: 40px !important;
+            min-height: 40px !important;
+            border-radius: 13px !important;
+            font-size: 12px !important;
+        }}
+        div[data-testid="stTextInput"] {{
+            margin-top: 0 !important;
+        }}
+        .coach-insight-panel {{
+            border-radius: 18px !important;
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--coach-panel) 96%, #000 5%), color-mix(in srgb, var(--coach-panel-2) 82%, transparent)) !important;
+            border-color: color-mix(in srgb, var(--coach-border) 86%, var(--coach-accent) 10%) !important;
+        }}
+        .coach-insight-head {{
+            padding: 12px 13px 10px !important;
+            border-bottom-color: var(--coach-border) !important;
+        }}
+        .coach-insight-head h3 {{
+            font-size: 14px !important;
+            font-weight: 820 !important;
+        }}
+        .coach-insight-head span {{
+            color: var(--coach-accent) !important;
+            font-size: 10px !important;
+            font-weight: 780 !important;
+        }}
+        .coach-insight-section {{
+            padding: 12px 13px !important;
+        }}
+        .coach-insight-section h4 {{
+            color: var(--coach-text) !important;
+            font-size: 12.5px !important;
+            font-weight: 780 !important;
+        }}
+        .coach-insight-section p,
+        .coach-insight-section li {{
+            color: var(--coach-soft) !important;
+            font-size: 11.3px !important;
+            line-height: 1.42 !important;
+        }}
+        .coach-insight-detail {{
+            height: 336px !important;
+            margin-top: 6px !important;
+        }}
+        .coach-score-line {{
+            border-radius: 12px !important;
+            background: color-mix(in srgb, var(--coach-panel-2) 78%, transparent) !important;
+            border-color: var(--coach-border) !important;
+        }}
+        .coach-score-line-head strong,
+        .coach-score-line-head span {{
+            font-size: 10.8px !important;
+        }}
+        .coach-voice-tools-card {{
+            border-radius: 16px !important;
+            max-height: 46px !important;
+        }}
+        div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+        div[data-testid="stSegmentedControl"] button[aria-selected="true"] {{
+            background: var(--coach-accent-soft) !important;
+            color: var(--coach-text) !important;
+        }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -1550,12 +1879,13 @@ def inject_chat_shell_css() -> None:
 
 
 def render_left_brand(mode_label: str, collapsed: bool) -> None:
+    short_mode = "API" if "API" in mode_label else "本地"
     if collapsed:
         st.markdown(
             """
             <div class="coach-shell-card coach-left-rail">
               <div class="coach-collapsed-brand">
-                <div class="coach-collapsed-logo">AI</div>
+                <div class="coach-collapsed-logo">EC</div>
               </div>
             </div>
             """,
@@ -1567,8 +1897,14 @@ def render_left_brand(mode_label: str, collapsed: bool) -> None:
         f"""
         <div class="coach-shell-card coach-left-rail coach-brand-card">
           <div class="coach-brand-row">
-            <div class="coach-brand-title">AI 英语陪练</div>
-            <div class="coach-status-pill">{esc(mode_label)}</div>
+            <div class="coach-logo-line">
+              <div class="coach-logo-mark">EC</div>
+              <div class="coach-logo-copy">
+                <div class="coach-brand-title">AI-English Coach</div>
+                <div class="coach-brand-subtitle">Speaking training terminal</div>
+              </div>
+            </div>
+            <div class="coach-status-pill">{esc(short_mode)}</div>
           </div>
         </div>
         """,
@@ -1583,7 +1919,7 @@ def render_goal_card(scenario: dict, lesson: dict, difficulty: str, mode_label: 
         f"""
         <div class="coach-goal-card">
           <div class="coach-card-head">
-            <strong>训练目标</strong>
+            <strong>训练任务</strong>
             <span>{esc(difficulty)}</span>
           </div>
           <div class="coach-stage-head">
@@ -1615,14 +1951,14 @@ def render_chat_status_bar(
         f"""
         <div class="coach-statusbar">
           <div class="coach-topbar-main">
-            <div class="coach-topbar-kicker">Speaking Practice</div>
-            <div class="coach-topbar-title">{esc(scenario.get("cn_label", ""))}</div>
-            <p>{esc(step.get("title", ""))} · Round {display_round} / {min_rounds}</p>
+            <div class="coach-topbar-kicker">AI4COACH 训练终端</div>
+            <div class="coach-topbar-title">进入你的口语训练席位</div>
+            <p>{esc(scenario.get("cn_label", ""))} · {esc(step.get("title", ""))} · Round {display_round} / {min_rounds}</p>
           </div>
           <div class="coach-topbar-meta">
+            <span>场景 · {esc(scenario.get("cn_label", ""))}</span>
             <span>阶段 · {esc(step.get("title", ""))}</span>
-            <span>轮次 · {display_round}/{min_rounds}</span>
-            <span>状态 · {esc(status_text)} · {progress}%</span>
+            <span>{esc(status_text)} · {progress}%</span>
           </div>
           <div class="coach-topbar-progress">
             <div class="coach-progress-track">
@@ -1638,14 +1974,15 @@ def render_chat_status_bar(
 def render_chat_history(messages: list[dict], height: int = 500) -> None:
     """Render role-aligned chat bubbles inside a fixed-height scroll box."""
     is_light = st.session_state.get("theme_mode") == "light"
-    chat_bg = "rgba(242,244,247,0.58)" if is_light else "rgba(45,49,57,0.56)"
-    assistant_bg = "rgba(250,251,252,0.72)" if is_light else "rgba(62,66,75,0.68)"
-    user_bg = "#30353d" if is_light else "#e7eaee"
-    user_text = "#f8f9fb" if is_light else "#252a31"
-    user_meta = "rgba(248,249,251,0.72)" if is_light else "rgba(37,42,49,0.56)"
-    text_color = "#252a31" if is_light else "#f0f1f3"
-    muted_color = "#6e7783" if is_light else "#b4bac3"
-    border_color = "rgba(35,40,48,0.13)" if is_light else "rgba(255,255,255,0.13)"
+    chat_bg = "rgba(233,236,240,0.58)" if is_light else "rgba(7,11,16,0.74)"
+    assistant_bg = "rgba(247,248,250,0.72)" if is_light else "rgba(19,29,38,0.84)"
+    user_bg = "rgba(122,97,45,0.15)" if is_light else "rgba(217,168,79,0.16)"
+    user_text = "#2a2111" if is_light else "#f3dfb6"
+    user_meta = "rgba(68,52,21,0.62)" if is_light else "rgba(243,223,182,0.66)"
+    text_color = "#20252b" if is_light else "#f2f3f0"
+    muted_color = "#6f7780" if is_light else "#87919c"
+    border_color = "rgba(35,40,48,0.11)" if is_light else "rgba(255,255,255,0.085)"
+    accent_color = "#7a612d" if is_light else "#d9a84f"
     if not messages:
         body = """
           <div class="empty-state">
@@ -1716,14 +2053,15 @@ def render_chat_history(messages: list[dict], height: int = 500) -> None:
         .chat-scroll {{
             height: {height}px;
             overflow-y: auto;
-            padding: 14px 16px 12px;
+            padding: 16px 17px 13px;
             background: {chat_bg};
             border: 1px solid {border_color};
             border-bottom: 0;
-            border-radius: 13px 13px 0 0;
+            border-radius: 16px 16px 0 0;
             scrollbar-color: rgba(148,163,184,0.42) transparent;
-            backdrop-filter: blur(24px) saturate(1.25);
-            -webkit-backdrop-filter: blur(24px) saturate(1.25);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+            backdrop-filter: blur(28px) saturate(1.18);
+            -webkit-backdrop-filter: blur(28px) saturate(1.18);
         }}
         .message-row {{
             display: flex;
@@ -1742,7 +2080,7 @@ def render_chat_history(messages: list[dict], height: int = 500) -> None:
             place-items: center;
             border-radius: 999px;
             border: 1px solid {border_color};
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.045);
             color: {muted_color};
             font-size: 10px;
             font-weight: 800;
@@ -1751,25 +2089,26 @@ def render_chat_history(messages: list[dict], height: int = 500) -> None:
             order: 2;
             background: {user_bg};
             color: {user_text};
+            border-color: rgba(217,168,79,0.28);
         }}
         .bubble {{
             max-width: min(74%, 680px);
-            padding: 10px 12px;
-            border-radius: 13px;
+            padding: 10px 12px 11px;
+            border-radius: 15px;
             border: 1px solid {border_color};
-            box-shadow: 0 10px 22px rgba(0,0,0,0.10);
+            box-shadow: 0 14px 30px rgba(0,0,0,0.14);
         }}
         .assistant .bubble {{
             background: {assistant_bg};
             color: {text_color};
-            border-bottom-left-radius: 5px;
+            border-bottom-left-radius: 6px;
         }}
         .user .bubble {{
             order: 1;
             background: {user_bg};
             color: {user_text};
-            border-color: rgba(0,0,0,0.10);
-            border-bottom-right-radius: 5px;
+            border-color: rgba(217,168,79,0.24);
+            border-bottom-right-radius: 6px;
         }}
         .system .bubble {{
             max-width: 86%;
@@ -1783,7 +2122,7 @@ def render_chat_history(messages: list[dict], height: int = 500) -> None:
             align-items: center;
             gap: 7px;
             margin-bottom: 5px;
-            font-size: 11px;
+            font-size: 10.5px;
             line-height: 1.3;
             color: {muted_color};
         }}
@@ -1795,7 +2134,7 @@ def render_chat_history(messages: list[dict], height: int = 500) -> None:
         .content {{
             white-space: pre-wrap;
             overflow-wrap: anywhere;
-            font-size: 13.5px;
+            font-size: 13px;
             line-height: 1.46;
         }}
         .empty-state {{
@@ -1807,8 +2146,9 @@ def render_chat_history(messages: list[dict], height: int = 500) -> None:
             gap: 6px;
             color: {muted_color};
             border: 1px dashed {border_color};
-            border-radius: 12px;
+            border-radius: 15px;
             padding: 22px;
+            background: rgba(255,255,255,0.025);
         }}
         .empty-state strong {{
             color: {text_color};
@@ -1818,6 +2158,16 @@ def render_chat_history(messages: list[dict], height: int = 500) -> None:
             color: {muted_color};
             font-size: 13px;
             line-height: 1.5;
+        }}
+        .empty-state strong::after {{
+            content: "";
+            display: block;
+            width: 34px;
+            height: 2px;
+            margin: 8px auto 0;
+            border-radius: 999px;
+            background: {accent_color};
+            opacity: 0.72;
         }}
         </style>
         """,
@@ -1923,11 +2273,11 @@ def render_analysis_panel(
         f"""
         <div class="coach-insight-panel">
           <div class="coach-insight-head">
-            <h3>学习分析</h3>
+            <h3>学习雷达</h3>
             <span>{esc(average) + "/100" if average is not None else "待评分"}</span>
           </div>
           <div class="coach-insight-section">
-            <h4>本轮 AI 追问</h4>
+            <h4>当前追问</h4>
             <p>{ai_text}</p>
           </div>
         </div>
@@ -1957,7 +2307,7 @@ def render_analysis_panel(
     detail_map = {
         "correction": ("纠错反馈", feedback_html),
         "score": ("五维评分", score_html),
-        "suggestion": ("学习建议", suggestion_html),
+        "suggestion": ("下一步建议", suggestion_html),
     }
     title, detail_html = detail_map[selected]
     st.html(

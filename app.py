@@ -74,6 +74,7 @@ def init_state() -> None:
         "last_spoken_reply": "",
         "voice_reply_enabled": True,
         "pending_user_input": "",
+        "pending_input_clear": False,
         "sidebar_collapsed": False,
         "active_view": "practice",
         "input_text": "",
@@ -111,6 +112,7 @@ def reset_conversation_state() -> None:
     st.session_state.voice_profile = {}
     st.session_state.last_spoken_reply = ""
     st.session_state.pending_user_input = ""
+    st.session_state.pending_input_clear = False
     st.session_state.input_text = ""
     st.session_state.recording_status = ""
     st.session_state.latest_suggestion = {}
@@ -558,6 +560,7 @@ def submit_user_answer(
     update_error_book(record)
     st.session_state.current_session_path = str(record_path)
     st.session_state.current_record_path = str(record_path)
+    st.session_state.pending_input_clear = True
     st.toast(f"练习记录已保存：{record_path.name}")
     return True
 
@@ -1213,12 +1216,14 @@ def main() -> None:
             st.session_state.sidebar_collapsed = not collapsed
             st.rerun()
 
+        if not collapsed:
+            st.markdown('<div class="coach-nav-label">导航</div>', unsafe_allow_html=True)
         view_defs = [
-            ("practice", "练习中心", "练习"),
+            ("practice", "练习终端", "练习"),
             ("history", "历史记录", "历史"),
-            ("analytics", "学习统计", "统计"),
-            ("report", "报告导出", "报告"),
-            ("settings", "设置说明", "设置"),
+            ("analytics", "学习数据", "统计"),
+            ("report", "报告中心", "报告"),
+            ("settings", "运行设置", "设置"),
         ]
         for view_key, full_label, short_label in view_defs:
             button_label = short_label if collapsed else full_label
@@ -1234,7 +1239,16 @@ def main() -> None:
         scenario = get_scenario(scenario_key)
         difficulty = st.session_state.selected_difficulty
         if not collapsed:
-            st.markdown('<div class="coach-control-title">训练控制</div>', unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div class="coach-mode-card">
+                  <strong>训练席位</strong>
+                  <span>{escape_text(mode_label)} · {escape_text(scenario.get("cn_label", ""))}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.markdown('<div class="coach-rail-label">训练参数</div>', unsafe_allow_html=True)
             scenario_key = st.selectbox(
                 "场景选择",
                 list_scenarios(),
@@ -1304,7 +1318,7 @@ def main() -> None:
                 st.segmented_control(
                     "主题",
                     options=["dark", "light"],
-                    format_func=lambda value: "☾" if value == "dark" else "☀",
+                    format_func=lambda value: "☾" if value == "dark" else "☼",
                     key="theme_mode",
                     label_visibility="collapsed",
                 )
@@ -1340,6 +1354,10 @@ def main() -> None:
                 st.session_state.input_text = st.session_state.pending_user_input
                 st.session_state.user_input = st.session_state.pending_user_input
                 st.session_state.pending_user_input = ""
+            if st.session_state.get("pending_input_clear"):
+                st.session_state.input_text = ""
+                st.session_state.user_input = ""
+                st.session_state.pending_input_clear = False
 
             if st.session_state.input_mode not in {"text", "voice"}:
                 st.session_state.input_mode = "text"
