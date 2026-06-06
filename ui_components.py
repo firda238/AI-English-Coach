@@ -486,6 +486,31 @@ def inject_chat_shell_css() -> None:
             font-size: 12px;
             line-height: 1.45;
         }
+        .coach-latency-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 7px;
+            margin: 9px 0;
+        }
+        .coach-latency-grid div {
+            padding: 8px;
+            border-radius: 8px;
+            background: var(--coach-panel-2);
+            border: 1px solid var(--coach-border);
+        }
+        .coach-latency-grid span {
+            display: block;
+            color: var(--coach-muted);
+            font-size: 10px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .coach-latency-grid strong {
+            display: block;
+            color: var(--coach-text);
+            font-size: 12px;
+            line-height: 1.2;
+        }
 
         @media (max-width: 980px) {
             .coach-statusbar,

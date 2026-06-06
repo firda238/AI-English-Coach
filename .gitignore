@@ -12,3 +12,4 @@ outputs/*.wav
 outputs/*.mp3
 outputs/*.m4a
 !outputs/.gitkeep
+run_streamlit*.log

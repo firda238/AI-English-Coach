@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -71,6 +72,7 @@ def init_state() -> None:
         "voice_transcript": "",
         "voice_status": "",
         "voice_profile": {},
+        "latest_latency_metrics": {},
         "last_spoken_reply": "",
         "voice_reply_enabled": True,
         "pending_user_input": "",
@@ -110,6 +112,7 @@ def reset_conversation_state() -> None:
     st.session_state.voice_transcript = ""
     st.session_state.voice_status = ""
     st.session_state.voice_profile = {}
+    st.session_state.latest_latency_metrics = {}
     st.session_state.last_spoken_reply = ""
     st.session_state.pending_user_input = ""
     st.session_state.pending_input_clear = False
@@ -399,21 +402,67 @@ def transcribe_to_input(audio_file, source_label: str = "录音") -> bool:
     return False
 
 
-def consume_enter_submit_text() -> str:
-    """Read and clear text submitted through the Enter-key browser bridge."""
+def _query_param_value(name: str, default: str = "") -> str:
     try:
-        text = st.query_params.get("coach_enter_submit", "")
+        value = st.query_params.get(name, default)
     except Exception:
-        return ""
-    if isinstance(text, list):
-        text = text[0] if text else ""
+        return default
+    if isinstance(value, list):
+        value = value[0] if value else default
+    return str(value or default)
+
+
+def consume_submit_bridge_payload() -> dict:
+    """Read and clear text submitted through browser-side input helpers."""
+    text = _query_param_value("coach_enter_submit")
+    mode = _query_param_value("coach_input_mode", "text")
+    recognition_ms = _query_param_value("coach_recognition_ms")
+    duration_seconds = _query_param_value("coach_voice_duration")
+    words_per_minute = _query_param_value("coach_voice_wpm")
     text = str(text or "")
     if text:
-        try:
-            del st.query_params["coach_enter_submit"]
-        except Exception:
-            pass
-    return text
+        for key in [
+            "coach_enter_submit",
+            "coach_input_mode",
+            "coach_recognition_ms",
+            "coach_voice_duration",
+            "coach_voice_wpm",
+        ]:
+            try:
+                del st.query_params[key]
+            except Exception:
+                pass
+    profile = {}
+    if mode == "browser_voice":
+        profile = {
+            "success": bool(text.strip()),
+            "engine": "browser-speech",
+            "confidence_label": "browser_final" if text.strip() else "unclear",
+            "duration_seconds": _safe_float(duration_seconds),
+            "words_per_minute": _safe_int(words_per_minute),
+            "recognition_latency_ms": _safe_int(recognition_ms),
+            "coach_tip": "浏览器听写已自动提交；请关注识别耗时、AI 回复耗时和语速指标。",
+        }
+    return {"text": text, "input_mode": mode, "voice_profile": profile}
+
+
+def consume_enter_submit_text() -> str:
+    """Read and clear text submitted through the Enter-key browser bridge."""
+    return consume_submit_bridge_payload()["text"]
+
+
+def _safe_int(value: object) -> int | None:
+    try:
+        return int(float(str(value)))
+    except (TypeError, ValueError):
+        return None
+
+
+def _safe_float(value: object) -> float | None:
+    try:
+        return round(float(str(value)), 2)
+    except (TypeError, ValueError):
+        return None
 
 
 def build_latest_suggestion(feedback: dict | None, lesson: dict, scenario: dict) -> dict:
@@ -455,6 +504,22 @@ def start_practice_session(scenario_key: str, difficulty: str, session_key: str)
     )
     st.session_state.last_ai_reply = opening
     st.session_state.session_started = True
+
+
+def activate_competition_mode() -> None:
+    """Prepare a stable judge-facing demo setup."""
+    scenario_key = "interview"
+    difficulty = "中等"
+    st.session_state.selected_scenario = scenario_key
+    st.session_state.selected_difficulty = difficulty
+    st.session_state.current_scene = scenario_key
+    st.session_state.current_difficulty = difficulty
+    st.session_state.active_view = "practice"
+    st.session_state.input_mode = "text"
+    st.session_state.voice_reply_enabled = True
+    start_practice_session(scenario_key, difficulty, f"{scenario_key}:{difficulty}")
+    refresh_latest_suggestion(scenario_key, get_scenario(scenario_key))
+    st.toast("目标模式已启动：面试场景、中等难度、AI 朗读开启。")
 
 
 def generate_current_summary(scenario: dict, difficulty: str) -> None:
@@ -516,9 +581,10 @@ def submit_user_answer(
             st.session_state.conversation_history.append(
                 {"role": "assistant", "content": opening, "stage": lesson["current_step"]["title"]}
             )
-            st.session_state.last_ai_reply = opening
+        st.session_state.last_ai_reply = opening
         st.session_state.session_started = True
 
+    turn_started_at = time.perf_counter()
     result = process_user_turn(
         clean_text,
         scenario_key,
@@ -529,14 +595,37 @@ def submit_user_answer(
         audio_used=audio_used,
         voice_profile=voice_profile,
     )
+    processing_latency_ms = round((time.perf_counter() - turn_started_at) * 1000)
     turn = result["turn"]
+    voice_profile = voice_profile or {}
+    recognition_latency_ms = voice_profile.get("recognition_latency_ms")
+    total_latency_ms = processing_latency_ms
+    if isinstance(recognition_latency_ms, (int, float)):
+        total_latency_ms += int(recognition_latency_ms)
+    latency_metrics = {
+        "input_mode": "voice" if audio_used else "text",
+        "recognition_latency_ms": recognition_latency_ms,
+        "ai_latency_ms": processing_latency_ms,
+        "total_latency_ms": total_latency_ms,
+        "engine": voice_profile.get("engine", "text"),
+    }
+    st.session_state.latest_latency_metrics = latency_metrics
+    turn["score"].setdefault("voice_profile", {}).update(
+        {
+            "recognition_latency_ms": recognition_latency_ms,
+            "ai_latency_ms": processing_latency_ms,
+            "total_latency_ms": total_latency_ms,
+            "latency_engine": voice_profile.get("engine", "text"),
+        }
+    )
     st.session_state.conversation_history.append(
         {
             "role": "user",
             "content": clean_text,
             "stage": result["stage"]["title"],
             "input_mode": "voice" if audio_used else "text",
-            "voice_profile": voice_profile or {},
+            "voice_profile": voice_profile,
+            "latency_metrics": latency_metrics,
         }
     )
     st.session_state.conversation_history.append(
@@ -717,20 +806,27 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
             <button id="dictation-start" type="button">开始</button>
             <button id="dictation-stop" type="button">停止</button>
             <button id="dictation-write" type="button">写入</button>
+            <button id="dictation-submit" type="button">提交</button>
           </div>
           <div id="dictation-text" class="dictation-text">识别结果会显示在这里。</div>
-          <div class="dictation-help">Chrome 支持时可直接调用浏览器语音识别；若不可用，请使用录音转写或文本输入。</div>
+          <div id="dictation-metrics" class="dictation-help">Chrome 支持时可直接调用浏览器语音识别；说完点“提交”可自动进入下一轮。</div>
         </div>
         <script>
         const disabled = {disabled_json};
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const statusEl = document.getElementById("dictation-status");
         const textEl = document.getElementById("dictation-text");
+        const metricsEl = document.getElementById("dictation-metrics");
         const startBtn = document.getElementById("dictation-start");
         const stopBtn = document.getElementById("dictation-stop");
         const writeBtn = document.getElementById("dictation-write");
+        const submitBtn = document.getElementById("dictation-submit");
         let recognition = null;
         let finalText = "";
+        let startedAt = 0;
+        let lastRecognitionMs = 0;
+        let lastDurationSeconds = 0;
+        let lastWpm = 0;
 
         function setStatus(text, state) {{
             statusEl.textContent = text;
@@ -760,10 +856,44 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
             return true;
         }}
 
+        function updateMetrics() {{
+            const words = finalText.trim().split(/\\s+/).filter(Boolean).length;
+            lastDurationSeconds = startedAt ? Math.max(1, Math.round((performance.now() - startedAt) / 100) / 10) : 0;
+            lastWpm = lastDurationSeconds > 0 ? Math.round(words / (lastDurationSeconds / 60)) : 0;
+            lastRecognitionMs = startedAt ? Math.round(performance.now() - startedAt) : 0;
+            metricsEl.textContent = finalText.trim()
+                ? `语音时长 ${{lastDurationSeconds}}s · 识别耗时 ${{lastRecognitionMs}}ms · 估算 ${{lastWpm}} WPM`
+                : "Chrome 支持时可直接调用浏览器语音识别；说完点“提交”可自动进入下一轮。";
+        }}
+
+        function submitToCoach(text) {{
+            if (!writeToStreamlitTextarea(text)) return false;
+            updateMetrics();
+            const url = new URL(window.parent.location.href);
+            url.searchParams.set("coach_enter_submit", text);
+            url.searchParams.set("coach_input_mode", "browser_voice");
+            url.searchParams.set("coach_recognition_ms", String(lastRecognitionMs || 0));
+            url.searchParams.set("coach_voice_duration", String(lastDurationSeconds || 0));
+            url.searchParams.set("coach_voice_wpm", String(lastWpm || 0));
+            window.parent.history.replaceState(null, "", url.toString());
+            window.parent.setTimeout(() => {{
+                const sendButton = [...window.parent.document.querySelectorAll("button")].find((button) =>
+                    button.innerText.trim() === "发送" &&
+                    !button.disabled &&
+                    button.getBoundingClientRect().width > 0 &&
+                    button.getBoundingClientRect().height > 0
+                );
+                if (sendButton) sendButton.click();
+            }}, 160);
+            setStatus("已提交", "ok");
+            return true;
+        }}
+
         function updateButtons(isListening) {{
             startBtn.disabled = disabled || !SpeechRecognition || isListening;
             stopBtn.disabled = disabled || !SpeechRecognition || !isListening;
             writeBtn.disabled = disabled || !finalText.trim();
+            submitBtn.disabled = disabled || !finalText.trim();
         }}
 
         if (disabled) {{
@@ -779,7 +909,9 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
             recognition.continuous = true;
 
             recognition.onstart = () => {{
+                startedAt = performance.now();
                 setStatus("正在听写", "active");
+                metricsEl.textContent = "正在识别，请用英文完整回答当前问题。";
                 updateButtons(true);
             }};
             recognition.onresult = (event) => {{
@@ -793,7 +925,9 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
                     }}
                 }}
                 textEl.textContent = [finalText, interimText].filter(Boolean).join(" ");
-                writeBtn.disabled = !finalText.trim();
+                updateMetrics();
+                writeBtn.disabled = disabled || !finalText.trim();
+                submitBtn.disabled = disabled || !finalText.trim();
             }};
             recognition.onerror = (event) => {{
                 setStatus(event.error === "not-allowed" ? "麦克风未授权" : `识别错误：${{event.error}}`, "error");
@@ -803,6 +937,7 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
                 if (finalText.trim()) {{
                     writeToStreamlitTextarea(finalText.trim());
                 }}
+                updateMetrics();
                 setStatus(finalText.trim() ? "听写完成" : "已停止", finalText.trim() ? "ok" : "");
                 updateButtons(false);
             }};
@@ -813,6 +948,8 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
         startBtn.addEventListener("click", () => {{
             if (!recognition) return;
             finalText = "";
+            startedAt = performance.now();
+            updateMetrics();
             textEl.textContent = "正在听写...";
             recognition.start();
         }});
@@ -821,6 +958,9 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
         }});
         writeBtn.addEventListener("click", () => {{
             if (finalText.trim()) writeToStreamlitTextarea(finalText.trim());
+        }});
+        submitBtn.addEventListener("click", () => {{
+            if (finalText.trim()) submitToCoach(finalText.trim());
         }});
         </script>
         <style>
@@ -857,7 +997,7 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
         #dictation-status[data-state="error"] {{ color: {card_text}; }}
         .dictation-actions {{
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 7px;
         }}
         .dictation-actions button {{
@@ -927,6 +1067,10 @@ def render_enter_submit_bridge() -> None:
                 if (!currentValue.trim()) return;
                 const url = new URL(window.parent.location.href);
                 url.searchParams.set("coach_enter_submit", currentValue);
+                url.searchParams.set("coach_input_mode", "text");
+                url.searchParams.delete("coach_recognition_ms");
+                url.searchParams.delete("coach_voice_duration");
+                url.searchParams.delete("coach_voice_wpm");
                 window.parent.history.replaceState(null, "", url.toString());
                 return true;
             }
@@ -1027,6 +1171,38 @@ def render_voice_tools_panel(
                         voice_profile=st.session_state.voice_profile,
                     )
                     st.rerun()
+
+
+def render_latency_panel() -> None:
+    """Show end-to-end voice/text loop latency for the latest turn."""
+    metrics = st.session_state.get("latest_latency_metrics") or {}
+    if not metrics:
+        st.markdown(
+            """
+            <div class="coach-analysis-card coach-latency-card">
+              <h3>端到端延迟</h3>
+              <p>完成一次语音或文本回答后显示识别耗时、AI 回复耗时和总延迟。</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+    recognition = metrics.get("recognition_latency_ms")
+    recognition_text = f"{recognition} ms" if isinstance(recognition, (int, float)) else "文本输入"
+    st.markdown(
+        f"""
+        <div class="coach-analysis-card coach-latency-card">
+          <h3>端到端延迟</h3>
+          <div class="coach-latency-grid">
+            <div><span>识别</span><strong>{escape_text(recognition_text)}</strong></div>
+            <div><span>AI 回复</span><strong>{int(metrics.get("ai_latency_ms") or 0)} ms</strong></div>
+            <div><span>总延迟</span><strong>{int(metrics.get("total_latency_ms") or 0)} ms</strong></div>
+          </div>
+          <p>输入通道：{escape_text(metrics.get("engine", "text"))}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_history_tab() -> None:
@@ -1178,9 +1354,11 @@ def render_settings_tab(mode_label: str) -> None:
     st.write(f"**当前模式：** {mode_label}")
     speech_status = get_speech_runtime_status()
     st.write("**项目定位：** 比赛成品原型，重点展示多轮场景训练、语音识别、教练反馈和学习报告。")
-    st.write("**语音模式：** Coach Voice Lab 录音提交式语音对话。用户录一段英文回答后转写并提交，AI 追问可由浏览器朗读。")
+    st.write("**目标模式：** 左侧一键进入面试中等难度，自动开场并开启 AI 追问朗读，适合现场展示。")
+    st.write("**语音模式：** Coach Voice Lab 支持浏览器听写自动提交、录音转写和音频上传；AI 追问可由浏览器朗读。")
     st.write(f"**语音识别引擎：** {speech_status['engine']}，模型：{speech_status['model_size']}。")
-    st.write("**语音边界：** 当前不是全双工实时通话；Pronunciation 为本地模拟评分，真实音素级评测可作为下一阶段增强。")
+    st.write("**延迟指标：** 每轮展示识别耗时、AI 回复耗时和端到端总延迟，便于说明语音闭环流畅性。")
+    st.write("**语音边界：** 当前不是全双工实时通话；Pronunciation 为本地估算评分，真实音素级评测可作为下一阶段增强。")
     st.write("**API dry-run：** `python scripts/check_api.py`")
     st.write("**API live 测试：** `python scripts/check_api.py --live`")
     st.write("**本地语音转写测试：** `WHISPER_MODEL_SIZE=tiny.en python scripts/test_transcription.py`")
@@ -1302,6 +1480,9 @@ def main() -> None:
             render_goal_card(scenario, current_lesson, difficulty, mode_label)
 
         if st.session_state.active_view == "practice":
+            if st.button("目标模式", type="primary", width="stretch", key="side_competition_mode"):
+                activate_competition_mode()
+                st.rerun()
             side_start, side_demo = st.columns(2)
             if side_start.button(
                 "开始",
@@ -1355,6 +1536,7 @@ def main() -> None:
                 st.session_state.latest_suggestion,
                 average,
             )
+            render_latency_panel()
             render_ai_voice_reply(st.session_state.last_ai_reply)
             render_voice_tools_panel(
                 disabled=round_full,
@@ -1461,9 +1643,18 @@ def main() -> None:
                             )
                             st.rerun()
             if submitted:
-                bridged_text = consume_enter_submit_text()
+                bridge_payload = consume_submit_bridge_payload()
+                bridged_text = bridge_payload.get("text", "")
                 clean_text = normalize_user_input(bridged_text or user_text)
-                if submit_user_answer(clean_text, scenario_key, scenario, difficulty, audio_used=False, voice_profile={}):
+                is_voice_bridge = bridge_payload.get("input_mode") == "browser_voice"
+                if submit_user_answer(
+                    clean_text,
+                    scenario_key,
+                    scenario,
+                    difficulty,
+                    audio_used=is_voice_bridge,
+                    voice_profile=bridge_payload.get("voice_profile") or {},
+                ):
                     st.rerun()
 
     else:
