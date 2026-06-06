@@ -22,6 +22,7 @@ def timestamp_slug() -> str:
 
 def save_practice_record(record: Dict) -> Path:
     ensure_output_dir()
+    record = normalize_practice_record(record)
     path = OUTPUT_DIR / f"practice_{timestamp_slug()}.json"
     with path.open("w", encoding="utf-8") as file:
         json.dump(record, file, ensure_ascii=False, indent=2)
@@ -31,6 +32,7 @@ def save_practice_record(record: Dict) -> Path:
 def save_or_update_practice_record(record: Dict, path: str | Path | None = None) -> Path:
     """Create a new practice record or replace an existing one."""
     ensure_output_dir()
+    record = normalize_practice_record(record)
     if path:
         target = Path(path)
         if target.exists():
@@ -55,7 +57,50 @@ def load_practice_record(path: str | Path) -> Dict:
     """Load one saved practice record."""
     target = Path(path)
     with target.open("r", encoding="utf-8") as file:
-        return json.load(file)
+        return normalize_practice_record(json.load(file))
+
+
+def normalize_practice_record(record: Dict) -> Dict:
+    """Return a history record with the current multi-turn schema keys present."""
+    normalized = dict(record)
+    feedback = normalized.get("correction_feedback") or {}
+    score = normalized.get("score_result") or {}
+    user_input = normalized.get("user_input", "")
+    ai_reply = normalized.get("ai_reply", "")
+
+    conversation_history = normalized.get("conversation_history")
+    if not isinstance(conversation_history, list) or not conversation_history:
+        conversation_history = []
+        if user_input:
+            conversation_history.append({"role": "user", "content": user_input, "stage": ""})
+        if ai_reply:
+            conversation_history.append({"role": "assistant", "content": ai_reply, "stage": ""})
+    normalized["conversation_history"] = conversation_history
+
+    feedback_history = normalized.get("feedback_history")
+    if not isinstance(feedback_history, list) or not feedback_history:
+        feedback_history = [feedback] if feedback else []
+    normalized["feedback_history"] = feedback_history
+
+    score_history = normalized.get("score_history")
+    if not isinstance(score_history, list) or not score_history:
+        score_history = [score] if score else []
+    normalized["score_history"] = score_history
+
+    round_count = normalized.get("round_count")
+    if not isinstance(round_count, int):
+        user_turns = sum(1 for item in conversation_history if item.get("role") == "user")
+        round_count = max(len(feedback_history), user_turns)
+    normalized["round_count"] = round_count
+
+    if "record_type" not in normalized:
+        normalized["record_type"] = "multi_turn_session" if round_count >= 2 else "legacy_single_turn"
+    if "overall_score" not in normalized and isinstance(score.get("total_score"), int):
+        normalized["overall_score"] = score["total_score"]
+    normalized.setdefault("correction_feedback", feedback_history[-1] if feedback_history else {})
+    normalized.setdefault("score_result", score_history[-1] if score_history else {})
+    normalized.setdefault("lesson_summary", "")
+    return normalized
 
 
 def delete_practice_record(path: str | Path) -> bool:

@@ -39,14 +39,28 @@ from storage import (
     save_or_update_practice_record,
     update_error_book,
 )
+from ui_components import (
+    inject_chat_shell_css,
+    render_analysis_panel,
+    render_chat_history,
+    render_chat_status_bar,
+    render_goal_card,
+    render_input_header,
+    render_left_brand,
+    render_summary_report,
+)
 
 
 def init_state() -> None:
+    default_scene = list_scenarios()[0]
+    default_difficulty = get_scenario(default_scene)["default_difficulty"]
     defaults = {
         "history": [],
         **empty_session_state(),
         "last_feedback": None,
         "last_score": None,
+        "latest_feedback": None,
+        "latest_score": None,
         "last_ai_reply": "",
         "latest_summary": "",
         "latest_summary_path": "",
@@ -60,6 +74,19 @@ def init_state() -> None:
         "last_spoken_reply": "",
         "voice_reply_enabled": True,
         "pending_user_input": "",
+        "pending_input_clear": False,
+        "sidebar_collapsed": False,
+        "active_view": "practice",
+        "input_text": "",
+        "input_mode": "text",
+        "recording_status": "",
+        "analysis_view": "correction",
+        "latest_suggestion": {},
+        "theme_mode": "dark",
+        "selected_scenario": default_scene,
+        "selected_difficulty": default_difficulty,
+        "current_scene": default_scene,
+        "current_difficulty": default_difficulty,
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
@@ -71,6 +98,8 @@ def reset_conversation_state() -> None:
     st.session_state.history = []
     st.session_state.last_feedback = None
     st.session_state.last_score = None
+    st.session_state.latest_feedback = None
+    st.session_state.latest_score = None
     st.session_state.last_ai_reply = ""
     st.session_state.latest_summary = ""
     st.session_state.latest_summary_path = ""
@@ -83,6 +112,10 @@ def reset_conversation_state() -> None:
     st.session_state.voice_profile = {}
     st.session_state.last_spoken_reply = ""
     st.session_state.pending_user_input = ""
+    st.session_state.pending_input_clear = False
+    st.session_state.input_text = ""
+    st.session_state.recording_status = ""
+    st.session_state.latest_suggestion = {}
 
 
 def escape_text(value: object) -> str:
@@ -354,6 +387,7 @@ def transcribe_to_input(audio_file, source_label: str = "录音") -> bool:
     """Transcribe an uploaded or recorded audio object into the answer box."""
     result = transcribe_audio(audio_file)
     st.session_state.voice_status = result["message"]
+    st.session_state.recording_status = result["message"]
     st.session_state.voice_profile = result
     if result["success"]:
         st.session_state.voice_transcript = result["text"]
@@ -363,6 +397,100 @@ def transcribe_to_input(audio_file, source_label: str = "录音") -> bool:
         return True
     st.warning(result["message"])
     return False
+
+
+def consume_enter_submit_text() -> str:
+    """Read and clear text submitted through the Enter-key browser bridge."""
+    try:
+        text = st.query_params.get("coach_enter_submit", "")
+    except Exception:
+        return ""
+    if isinstance(text, list):
+        text = text[0] if text else ""
+    text = str(text or "")
+    if text:
+        try:
+            del st.query_params["coach_enter_submit"]
+        except Exception:
+            pass
+    return text
+
+
+def build_latest_suggestion(feedback: dict | None, lesson: dict, scenario: dict) -> dict:
+    """Build a compact current-round learning suggestion for the right panel."""
+    step = lesson.get("current_step", {})
+    if not feedback:
+        return {
+            "main_issue": "等待本轮回答。",
+            "recommended_expressions": scenario.get("recommended_expressions", [])[:2],
+            "practice_sentence": step.get("target_expression", ""),
+            "next_tip": step.get("prompt", "先回答当前问题，再补充一个原因或例子。"),
+        }
+
+    issues = feedback.get("issue_explanation") or []
+    expressions = feedback.get("alternative_expressions") or scenario.get("recommended_expressions", [])
+    drills = feedback.get("practice_sentences") or []
+    focus_points = feedback.get("focus_points") or feedback.get("expression_suggestions") or []
+    return {
+        "main_issue": issues[0] if issues else "本轮没有明显语法错误，重点提高细节和自然度。",
+        "recommended_expressions": expressions[:3],
+        "practice_sentence": drills[0] if drills else feedback.get("corrected_sentence", ""),
+        "next_tip": focus_points[0] if focus_points else step.get("evaluation_focus", step.get("prompt", "")),
+    }
+
+
+def refresh_latest_suggestion(scenario_key: str, scenario: dict) -> None:
+    lesson = stage_progress(scenario_key, st.session_state.current_round)
+    st.session_state.latest_suggestion = build_latest_suggestion(st.session_state.last_feedback, lesson, scenario)
+
+
+def start_practice_session(scenario_key: str, difficulty: str, session_key: str) -> None:
+    """Reset and start a new proactive AI-led practice session."""
+    reset_conversation_state()
+    st.session_state.current_stage_key = session_key
+    opening = build_opening_question(scenario_key, difficulty)
+    lesson = stage_progress(scenario_key, 0)
+    st.session_state.conversation_history.append(
+        {"role": "assistant", "content": opening, "stage": lesson["current_step"]["title"]}
+    )
+    st.session_state.last_ai_reply = opening
+    st.session_state.session_started = True
+
+
+def generate_current_summary(scenario: dict, difficulty: str) -> None:
+    """Generate and persist the current lesson summary/report record."""
+    summary_history = history_for_summary(st.session_state.conversation_history)
+    combined_feedback = {
+        "issue_explanation": [
+            issue
+            for feedback in st.session_state.feedback_history
+            for issue in feedback.get("issue_explanation", [])
+        ]
+    }
+    combined_score = {"total_score": average_score(st.session_state.score_history)}
+    summary = generate_lesson_summary(
+        summary_history,
+        scenario,
+        difficulty,
+        combined_feedback,
+        combined_score,
+    )
+    st.session_state.latest_summary = summary
+    summary_path = save_markdown_summary(summary)
+    st.session_state.latest_summary_path = str(summary_path)
+    record = build_session_record(
+        scenario,
+        difficulty,
+        st.session_state.conversation_history,
+        st.session_state.feedback_history,
+        st.session_state.score_history,
+        summary,
+    )
+    record_path = save_or_update_practice_record(record, st.session_state.current_session_path)
+    st.session_state.current_session_path = str(record_path)
+    st.session_state.current_record_path = str(record_path)
+    update_error_book(record)
+    st.success(f"课后总结已生成：{Path(summary_path).name}")
 
 
 def submit_user_answer(
@@ -415,7 +543,10 @@ def submit_user_answer(
     st.session_state.history = history_for_summary(st.session_state.conversation_history)
     st.session_state.last_feedback = turn["correction"]
     st.session_state.last_score = turn["score"]
+    st.session_state.latest_feedback = turn["correction"]
+    st.session_state.latest_score = turn["score"]
     st.session_state.last_ai_reply = turn["ai_reply"]
+    refresh_latest_suggestion(scenario_key, scenario)
 
     record = build_session_record(
         scenario,
@@ -429,6 +560,7 @@ def submit_user_answer(
     update_error_book(record)
     st.session_state.current_session_path = str(record_path)
     st.session_state.current_record_path = str(record_path)
+    st.session_state.pending_input_clear = True
     st.toast(f"练习记录已保存：{record_path.name}")
     return True
 
@@ -448,7 +580,10 @@ def load_demo_session(scenario_key: str, scenario: dict, difficulty: str, sessio
     st.session_state.history = history_for_summary(st.session_state.conversation_history)
     st.session_state.last_feedback = demo["last_feedback"]
     st.session_state.last_score = demo["last_score"]
+    st.session_state.latest_feedback = demo["last_feedback"]
+    st.session_state.latest_score = demo["last_score"]
     st.session_state.last_ai_reply = demo["last_ai_reply"]
+    refresh_latest_suggestion(scenario_key, scenario)
 
     combined_feedback = {
         "issue_explanation": [
@@ -555,6 +690,15 @@ def render_ai_voice_reply(reply: str) -> None:
 def render_browser_speech_dictation(disabled: bool = False) -> None:
     """Render a Chrome Web Speech API helper that writes into the answer box."""
     disabled_json = json.dumps(disabled)
+    is_light = st.session_state.get("theme_mode") == "light"
+    card_bg = "rgba(255,255,255,0.68)" if is_light else "rgba(31,31,34,0.72)"
+    card_border = "rgba(0,0,0,0.14)" if is_light else "rgba(255,255,255,0.14)"
+    card_text = "#111111" if is_light else "#f5f5f7"
+    muted_text = "#6b7280" if is_light else "#a3a3a3"
+    button_bg = "rgba(255,255,255,0.60)" if is_light else "rgba(255,255,255,0.08)"
+    primary_bg = "#111111" if is_light else "#f5f5f7"
+    primary_text = "#ffffff" if is_light else "#09090b"
+    input_bg = "rgba(255,255,255,0.56)" if is_light else "rgba(255,255,255,0.06)"
     components.html(
         f"""
         <div class="dictation-card">
@@ -676,11 +820,13 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
             box-sizing: border-box;
             width: 100%;
             padding: 12px;
-            border: 1px solid #26364a;
-            border-radius: 14px;
-            background: linear-gradient(135deg, #0f172a, #112033);
-            color: #f8fafc;
+            border: 1px solid {card_border};
+            border-radius: 8px;
+            background: {card_bg};
+            color: {card_text};
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            backdrop-filter: blur(24px) saturate(1.25);
+            -webkit-backdrop-filter: blur(24px) saturate(1.25);
         }}
         .dictation-head {{
             display: flex;
@@ -694,24 +840,24 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
             white-space: nowrap;
         }}
         #dictation-status {{
-            color: #94a3b8;
+            color: {muted_text};
             font-size: 12px;
             font-weight: 700;
         }}
-        #dictation-status[data-state="ok"] {{ color: #4ade80; }}
-        #dictation-status[data-state="active"] {{ color: #38bdf8; }}
-        #dictation-status[data-state="error"] {{ color: #f59e0b; }}
+        #dictation-status[data-state="ok"],
+        #dictation-status[data-state="active"],
+        #dictation-status[data-state="error"] {{ color: {card_text}; }}
         .dictation-actions {{
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 7px;
         }}
         .dictation-actions button {{
-            border: 1px solid #334155;
-            border-radius: 9px;
+            border: 1px solid {card_border};
+            border-radius: 8px;
             padding: 8px 6px;
-            background: #0b1220;
-            color: #f8fafc;
+            background: {button_bg};
+            color: {card_text};
             font-size: 12px;
             font-weight: 800;
             cursor: pointer;
@@ -720,8 +866,9 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
             text-overflow: ellipsis;
         }}
         .dictation-actions button:first-child {{
-            background: #ef4444;
-            border-color: #ef4444;
+            background: {primary_bg};
+            border-color: {primary_bg};
+            color: {primary_text};
         }}
         .dictation-actions button:disabled {{
             opacity: 0.45;
@@ -731,16 +878,16 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
             margin-top: 9px;
             min-height: 34px;
             padding: 9px;
-            border: 1px solid #243244;
-            border-radius: 9px;
-            background: #0b1220;
-            color: #e2e8f0;
+            border: 1px solid {card_border};
+            border-radius: 8px;
+            background: {input_bg};
+            color: {card_text};
             font-size: 12px;
             line-height: 1.45;
         }}
         .dictation-help {{
             margin-top: 7px;
-            color: #94a3b8;
+            color: {muted_text};
             font-size: 11px;
             line-height: 1.45;
         }}
@@ -748,6 +895,112 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
         """,
         height=205,
     )
+
+
+def render_enter_submit_bridge() -> None:
+    """Submit the text answer with Enter while preserving click-submit behavior."""
+    components.html(
+        """
+        <script>
+        function bindEnterSubmit() {
+            const doc = window.parent.document;
+            const answerInput =
+                doc.querySelector('input[aria-label="用户英文输入"]') ||
+                doc.querySelector('textarea[aria-label="用户英文输入"]');
+            if (!answerInput || answerInput.dataset.coachEnterBound === "1") return;
+            answerInput.dataset.coachEnterBound = "1";
+            answerInput.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter" || event.shiftKey) return;
+                event.preventDefault();
+                const currentValue = answerInput.value || "";
+                if (!currentValue.trim()) return;
+                const url = new URL(window.parent.location.href);
+                url.searchParams.set("coach_enter_submit", currentValue);
+                window.parent.history.replaceState(null, "", url.toString());
+                window.parent.setTimeout(() => {
+                    const sendButton = [...doc.querySelectorAll("button")].find((button) =>
+                        button.innerText.trim() === "发送" &&
+                        !button.disabled &&
+                        button.getBoundingClientRect().width > 0 &&
+                        button.getBoundingClientRect().height > 0
+                    );
+                    if (sendButton) sendButton.click();
+                }, 140);
+            });
+        }
+        bindEnterSubmit();
+        window.parent.requestAnimationFrame(bindEnterSubmit);
+        window.parent.setTimeout(bindEnterSubmit, 250);
+        window.parent.setTimeout(bindEnterSubmit, 800);
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
+def render_voice_tools_panel(
+    disabled: bool,
+    scenario_key: str,
+    scenario: dict,
+    difficulty: str,
+) -> None:
+    """Render secondary voice tools in the right utility rail."""
+    st.markdown(
+        """
+        <div class="coach-analysis-card coach-voice-tools-card">
+          <h3>语音工具</h3>
+          <p>辅助输入放在右侧，不占用主聊天区。</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    dictation_col, upload_col = st.columns([1, 1])
+    with dictation_col:
+        if hasattr(st, "popover"):
+            with st.popover("听写"):
+                render_browser_speech_dictation(disabled=disabled)
+        else:
+            with st.expander("听写", expanded=False):
+                render_browser_speech_dictation(disabled=disabled)
+    with upload_col:
+        if hasattr(st, "popover"):
+            upload_context = st.popover("上传")
+        else:
+            upload_context = st.expander("上传", expanded=False)
+        with upload_context:
+            uploaded_file = st.file_uploader(
+                "上传音频文件",
+                type=SUPPORTED_AUDIO_TYPES,
+                help="支持 wav、mp3、m4a。本地语音模型不可用时会保留文本输入主流程。",
+                key="right_uploaded_audio",
+            )
+            file_col1, file_col2 = st.columns([1, 1])
+            if file_col1.button(
+                "转文字",
+                width="stretch",
+                disabled=uploaded_file is None,
+                key="right_transcribe_file",
+            ):
+                if transcribe_to_input(uploaded_file, "音频文件"):
+                    st.session_state.input_mode = "text"
+                st.rerun()
+            if file_col2.button(
+                "提交",
+                width="stretch",
+                disabled=uploaded_file is None or disabled,
+                key="right_submit_file",
+            ):
+                if transcribe_to_input(uploaded_file, "音频文件"):
+                    submit_user_answer(
+                        normalize_user_input(st.session_state.voice_transcript),
+                        scenario_key,
+                        scenario,
+                        difficulty,
+                        audio_used=True,
+                        voice_profile=st.session_state.voice_profile,
+                    )
+                    st.rerun()
 
 
 def render_history_tab() -> None:
@@ -914,291 +1167,6 @@ def configure_browser_behavior() -> None:
     st.markdown(
         """
         <meta name="google" content="notranslate">
-        <style>
-        :root {
-            --coach-bg: #0b1220;
-            --coach-panel: #101827;
-            --coach-panel-2: #111f32;
-            --coach-border: #243244;
-            --coach-muted: #9fb0c3;
-            --coach-text: #f8fafc;
-            --coach-blue: #38bdf8;
-            --coach-green: #22c55e;
-            --coach-amber: #f59e0b;
-        }
-        .block-container { padding-top: 1.4rem; }
-        .stChatMessage { border: 1px solid #edf0f2; border-radius: 10px; }
-        section[data-testid="stSidebar"] {
-            border-right: 1px solid rgba(148, 163, 184, 0.18);
-        }
-        .coach-hero {
-            display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
-            gap: 18px;
-            background:
-                radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 30%),
-                linear-gradient(135deg, #0f172a, #111827 65%, #0b1220);
-            border: 1px solid #233244;
-            border-radius: 18px;
-            padding: 26px 28px;
-            margin-bottom: 20px;
-            color: var(--coach-text);
-            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
-        }
-        .coach-hero h1 {
-            margin: 4px 0 8px;
-            font-size: 38px;
-            line-height: 1.12;
-            color: #ffffff;
-            letter-spacing: 0;
-        }
-        .coach-hero p {
-            margin: 0;
-            max-width: 720px;
-            color: #cbd5e1;
-            font-size: 15px;
-            line-height: 1.7;
-        }
-        .coach-eyebrow {
-            color: #67e8f9;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0;
-            text-transform: uppercase;
-        }
-        .hero-status-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-        }
-        .hero-status-item {
-            background: rgba(15, 23, 42, 0.82);
-            border: 1px solid rgba(148, 163, 184, 0.22);
-            border-radius: 12px;
-            padding: 12px 14px;
-        }
-        .hero-status-item span,
-        .lesson-prompt-grid span {
-            display: block;
-            color: #94a3b8;
-            font-size: 12px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-        .hero-status-item strong,
-        .lesson-prompt-grid strong {
-            color: #f8fafc;
-            font-size: 15px;
-            line-height: 1.35;
-        }
-        .section-intro {
-            margin: 6px 0 18px;
-        }
-        .section-intro h2 {
-            margin: 0 0 4px;
-            color: #f8fafc;
-            font-size: 25px;
-            line-height: 1.2;
-        }
-        .section-intro p {
-            margin: 0;
-            color: #aebed0;
-            font-size: 14px;
-        }
-        .lesson-card {
-            background: linear-gradient(135deg, #101827, #102033);
-            border: 1px solid #26364a;
-            border-radius: 16px;
-            padding: 18px 20px;
-            margin: 4px 0 18px;
-            color: #e5e7eb;
-        }
-        .lesson-card-head {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
-        }
-        .lesson-card h3 {
-            margin: 3px 0 0;
-            color: #ffffff;
-            font-size: 22px;
-        }
-        .lesson-card-head > strong {
-            color: #f8fafc;
-            background: #0b1220;
-            border: 1px solid #334155;
-            border-radius: 999px;
-            padding: 6px 10px;
-            min-width: 64px;
-            text-align: center;
-        }
-        .lesson-progress-track {
-            height: 9px;
-            background: #0b1220;
-            border: 1px solid #334155;
-            border-radius: 999px;
-            overflow: hidden;
-            margin: 14px 0;
-        }
-        .lesson-progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--coach-blue), var(--coach-green));
-        }
-        .lesson-card p {
-            color: #cbd5e1;
-            margin: 10px 0 14px;
-            line-height: 1.65;
-        }
-        .lesson-prompt-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-        }
-        .lesson-prompt-grid div,
-        .empty-panel {
-            background: #0b1220;
-            border: 1px solid #26364a;
-            border-radius: 12px;
-            padding: 12px 14px;
-        }
-        .empty-panel {
-            color: #cbd5e1;
-            display: grid;
-            gap: 4px;
-        }
-        .empty-panel strong {
-            color: #f8fafc;
-        }
-        .voice-lab-card {
-            background: linear-gradient(135deg, #0f172a, #112033);
-            border: 1px solid #26364a;
-            border-radius: 14px;
-            padding: 13px 14px;
-            margin: 6px 0 12px;
-            color: #f8fafc;
-        }
-        .voice-lab-card.voice-ready {
-            border-color: rgba(34, 197, 94, 0.48);
-            box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.12);
-        }
-        .voice-lab-card.voice-missing {
-            border-color: rgba(245, 158, 11, 0.45);
-            box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.1);
-        }
-        .voice-lab-head {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .voice-lab-head span,
-        .voice-lab-grid span {
-            color: #9fb0c3;
-            font-size: 12px;
-            font-weight: 800;
-        }
-        .voice-lab-head strong {
-            color: #f8fafc;
-            font-size: 13px;
-            text-align: right;
-        }
-        .voice-lab-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr);
-            gap: 8px;
-        }
-        .voice-lab-grid div {
-            background: #0b1220;
-            border: 1px solid #26364a;
-            border-radius: 10px;
-            padding: 9px 10px;
-        }
-        .voice-lab-grid strong {
-            display: block;
-            color: #f8fafc;
-            margin-top: 4px;
-            overflow-wrap: anywhere;
-        }
-        div[data-testid="stTabs"] button[role="tab"] {
-            font-weight: 750;
-            border-radius: 10px 10px 0 0;
-        }
-        .score-total-card {
-            background: linear-gradient(135deg, #0f172a, #111f32) !important;
-            border: 1px solid #475569 !important;
-            border-radius: 12px;
-            padding: 18px 20px;
-            margin: 8px 0 18px;
-            color: #f8fafc !important;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.20);
-        }
-        .score-total-card * {
-            color: inherit !important;
-        }
-        .score-total-label {
-            color: #cbd5e1 !important;
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-        .score-total-value {
-            color: #ffffff !important;
-            font-size: 34px;
-            font-weight: 800;
-            line-height: 1.1;
-            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.22);
-        }
-        .score-dimension-card {
-            background: #0f172a !important;
-            border: 1px solid #334155 !important;
-            border-radius: 10px;
-            padding: 14px 16px;
-            margin: 12px 0;
-            color: #e5e7eb !important;
-        }
-        .score-dimension-head {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            color: #f8fafc !important;
-            font-size: 16px;
-            font-weight: 750;
-            margin-bottom: 10px;
-        }
-        .score-dimension-head span,
-        .score-dimension-head strong {
-            color: #f8fafc !important;
-        }
-        .score-bar-track {
-            height: 9px;
-            background: #1e293b;
-            border-radius: 999px;
-            overflow: hidden;
-            border: 1px solid #334155;
-        }
-        .score-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #38bdf8, #22c55e);
-            border-radius: 999px;
-        }
-        .score-explanation {
-            color: #cbd5e1 !important;
-            font-size: 13px;
-            line-height: 1.5;
-            margin-top: 9px;
-        }
-        @media (max-width: 900px) {
-            .coach-hero,
-            .lesson-prompt-grid {
-                grid-template-columns: 1fr;
-            }
-            .coach-hero h1 {
-                font-size: 30px;
-            }
-        }
-        </style>
         """,
         unsafe_allow_html=True,
     )
@@ -1230,339 +1198,308 @@ def main() -> None:
     st.set_page_config(page_title="AI 英语口语陪练", page_icon="🎙️", layout="wide")
     init_state()
     configure_browser_behavior()
+    inject_chat_shell_css()
 
-    scenario_key = st.sidebar.selectbox(
-        "场景选择",
-        list_scenarios(),
-        format_func=scenario_label,
-    )
-    scenario = get_scenario(scenario_key)
-    difficulty = st.sidebar.selectbox(
-        "难度选择",
-        DIFFICULTIES,
-        index=DIFFICULTIES.index(scenario["default_difficulty"]),
-    )
-    session_key = f"{scenario_key}:{difficulty}"
-    if st.session_state.current_stage_key and st.session_state.current_stage_key != session_key:
-        reset_conversation_state()
-    if not st.session_state.current_stage_key:
-        st.session_state.current_stage_key = session_key
     mode_label = "API 模式" if api_mode_available() else "本地演示模式"
+    if st.session_state.selected_scenario not in list_scenarios():
+        st.session_state.selected_scenario = list_scenarios()[0]
+    if st.session_state.selected_difficulty not in DIFFICULTIES:
+        st.session_state.selected_difficulty = get_scenario(st.session_state.selected_scenario)["default_difficulty"]
 
-    st.sidebar.title("AI-English-Coach")
-    st.sidebar.info(f"当前模式：{mode_label}")
-    st.sidebar.markdown("**练习目标**")
-    st.sidebar.write(scenario["user_goal"])
-    with st.sidebar.expander("常见问题与推荐表达", expanded=True):
-        st.write("**常见问题**")
-        for question in scenario["common_questions"]:
-            st.write(f"- {question}")
-        st.write("**推荐表达**")
-        for expression in scenario["recommended_expressions"]:
-            st.write(f"- {expression}")
-    with st.sidebar.expander("最近保存记录", expanded=True):
-        files = list_history_files()
-        if not files:
-            st.caption("暂无历史记录。")
-        else:
-            selected_history = st.selectbox(
-                "选择历史记录",
-                files,
-                format_func=lambda file: file.name,
+    collapsed = bool(st.session_state.sidebar_collapsed)
+    layout = [0.07, 0.68, 0.25] if collapsed else [0.16, 0.60, 0.24]
+    left_rail, center, right = st.columns(layout, gap="small")
+
+    with left_rail:
+        render_left_brand(mode_label, collapsed)
+        if st.button("展开" if collapsed else "收起", key="toggle_left_rail", width="stretch"):
+            st.session_state.sidebar_collapsed = not collapsed
+            st.rerun()
+
+        if not collapsed:
+            st.markdown('<div class="coach-nav-label">导航</div>', unsafe_allow_html=True)
+        view_defs = [
+            ("practice", "01 练习终端", "练习"),
+            ("history", "02 历史记录", "历史"),
+            ("analytics", "03 学习数据", "统计"),
+            ("report", "04 报告中心", "报告"),
+            ("settings", "05 运行设置", "设置"),
+        ]
+        for view_key, full_label, short_label in view_defs:
+            button_label = short_label if collapsed else full_label
+            if st.button(
+                button_label,
+                key=f"view_{view_key}",
+                type="primary" if st.session_state.active_view == view_key else "secondary",
+                width="stretch",
+            ):
+                st.session_state.active_view = view_key
+
+        scenario_key = st.session_state.selected_scenario
+        scenario = get_scenario(scenario_key)
+        difficulty = st.session_state.selected_difficulty
+        if not collapsed:
+            st.markdown(
+                f"""
+                <div class="coach-mode-card">
+                  <strong>训练席位</strong>
+                  <span>{escape_text(mode_label)} · {escape_text(scenario.get("cn_label", ""))}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
-            try:
-                render_history_record(load_practice_record(selected_history))
-            except Exception as exc:
-                st.warning(f"历史记录读取失败：{exc}")
+            st.markdown('<div class="coach-rail-label">训练参数</div>', unsafe_allow_html=True)
+            scenario_key = st.selectbox(
+                "场景选择",
+                list_scenarios(),
+                format_func=scenario_label,
+                key="selected_scenario",
+            )
+            scenario = get_scenario(scenario_key)
+            difficulty = st.selectbox(
+                "难度选择",
+                DIFFICULTIES,
+                key="selected_difficulty",
+            )
+        st.session_state.current_scene = scenario_key
+        st.session_state.current_difficulty = difficulty
 
-    current_lesson = stage_progress(scenario_key, st.session_state.current_round)
-    render_app_header(scenario, difficulty, mode_label, current_lesson["progress"])
+        session_key = f"{scenario_key}:{difficulty}"
+        if st.session_state.current_stage_key and st.session_state.current_stage_key != session_key:
+            reset_conversation_state()
+        if not st.session_state.current_stage_key:
+            st.session_state.current_stage_key = session_key
+        current_lesson = stage_progress(scenario_key, st.session_state.current_round)
+        refresh_latest_suggestion(scenario_key, scenario)
 
-    practice_tab, history_tab, analytics_tab, report_tab, settings_tab = st.tabs(
-        ["练习中心", "历史记录", "学习统计", "报告导出", "设置说明"]
-    )
+        if not collapsed:
+            render_goal_card(scenario, current_lesson, difficulty, mode_label)
 
-    with practice_tab:
-        left_sidebar, center, right = st.columns([0.9, 1.45, 1])
-
-        with left_sidebar:
-            render_section_intro("训练状态", "场景、难度、训练目标和当前模式。")
-            st.metric("已完成轮次", f"{st.session_state.current_round}/{MIN_SUMMARY_ROUNDS}")
-            st.write(f"**场景：** {scenario['cn_label']}")
-            st.write(f"**难度：** {difficulty}")
-            st.write(f"**模式：** {mode_label}")
-            st.write(f"**状态：** {'已开始' if st.session_state.session_started else '未开始'}")
-            render_course_panel(scenario_key)
-
-        with center:
-            render_section_intro("多轮场景对话", "点击开始后由 AI 主动开场；每次回答后进入下一轮追问。")
-            start_col, demo_col, clear_col = st.columns([1, 1, 1])
-            if start_col.button(
-                "开始练习",
+        if st.session_state.active_view == "practice":
+            side_start, side_demo = st.columns(2)
+            if side_start.button(
+                "开始",
                 type="primary",
                 width="stretch",
                 disabled=st.session_state.session_started,
+                key="side_start_practice",
             ):
-                reset_conversation_state()
-                st.session_state.current_stage_key = session_key
-                opening = build_opening_question(scenario_key, difficulty)
-                st.session_state.conversation_history.append(
-                    {"role": "assistant", "content": opening, "stage": current_lesson["current_step"]["title"]}
-                )
-                st.session_state.last_ai_reply = opening
-                st.session_state.session_started = True
+                start_practice_session(scenario_key, difficulty, session_key)
+                refresh_latest_suggestion(scenario_key, scenario)
                 st.rerun()
-            if demo_col.button("生成演示会话", width="stretch"):
+            if side_demo.button("演示", width="stretch", key="side_demo_session"):
                 load_demo_session(scenario_key, scenario, difficulty, session_key)
                 st.rerun()
-            if clear_col.button("清空当前对话", width="stretch"):
+            side_summary, side_clear = st.columns(2)
+            can_summarize = st.session_state.current_round >= MIN_SUMMARY_ROUNDS
+            if side_summary.button(
+                "总结",
+                width="stretch",
+                disabled=not can_summarize,
+                key="side_summary",
+            ):
+                if not st.session_state.latest_summary:
+                    generate_current_summary(scenario, difficulty)
+                st.session_state.active_view = "summary"
+                st.rerun()
+            if side_clear.button("清空", width="stretch", key="side_clear"):
                 reset_conversation_state()
                 st.session_state.current_stage_key = session_key
+                refresh_latest_suggestion(scenario_key, scenario)
                 st.rerun()
 
-            text_col, voice_col = st.columns([1.15, 0.95])
-            with text_col:
-                st.markdown("**文本回答**")
-                quick_col1, quick_col2 = st.columns([1, 1])
-                if quick_col1.button("填入当前任务问题", width="stretch"):
-                    st.session_state.user_input = current_lesson["current_step"]["prompt"]
-                    st.rerun()
-                if quick_col2.button("填入示例回答", width="stretch"):
-                    st.session_state.user_input = (
-                        f"{current_lesson['current_step']['target_expression']} "
-                        "I can explain this with one specific example."
-                    )
-                    st.rerun()
+    average = average_score(st.session_state.score_history) if st.session_state.score_history else None
 
-                if st.session_state.pending_user_input:
-                    st.session_state.user_input = st.session_state.pending_user_input
-                    st.session_state.pending_user_input = ""
+    if st.session_state.active_view == "practice":
+        round_full = st.session_state.current_round >= MAX_TRAINING_ROUNDS
+        with right:
+            _, theme_col = st.columns([0.56, 0.44])
+            with theme_col:
+                st.segmented_control(
+                    "主题",
+                    options=["dark", "light"],
+                    format_func=lambda value: "☾" if value == "dark" else "☼",
+                    key="theme_mode",
+                    label_visibility="collapsed",
+                )
+            render_analysis_panel(
+                st.session_state.last_ai_reply,
+                st.session_state.last_feedback,
+                st.session_state.last_score,
+                st.session_state.latest_suggestion,
+                average,
+            )
+            render_ai_voice_reply(st.session_state.last_ai_reply)
+            render_voice_tools_panel(
+                disabled=not st.session_state.session_started or round_full,
+                scenario_key=scenario_key,
+                scenario=scenario,
+                difficulty=difficulty,
+            )
 
-                user_text = st.text_area(
-                    "用户英文输入",
-                    key="user_input",
-                    height=150,
-                    placeholder="Example: I am agree we should discuss about this topic",
-                )
-                submitted = st.button(
-                    "提交回答",
-                    type="primary",
-                    width="stretch",
-                    disabled=not st.session_state.session_started
-                    or st.session_state.current_round >= MAX_TRAINING_ROUNDS,
-                )
+        with center:
+            render_chat_status_bar(
+                scenario,
+                current_lesson,
+                st.session_state.current_round,
+                MIN_SUMMARY_ROUNDS,
+                st.session_state.session_started,
+            )
 
-            with voice_col:
-                st.markdown("**Coach Voice Lab**")
-                st.toggle(
-                    "AI 朗读追问",
-                    key="voice_reply_enabled",
-                    help="使用浏览器 SpeechSynthesis 朗读 AI 的最新追问。",
-                )
-                render_voice_lab_status()
-                render_browser_speech_dictation(
-                    disabled=not st.session_state.session_started
-                    or st.session_state.current_round >= MAX_TRAINING_ROUNDS
-                )
-                recorded_audio = st.audio_input(
-                    "录制英文回答",
-                    key="recorded_answer",
-                    help="录一段英文回答后，可转写到输入框或直接提交。",
-                )
-                rec_col1, rec_col2 = st.columns([1, 1])
-                if rec_col1.button("转写到输入框", width="stretch", disabled=recorded_audio is None):
-                    transcribe_to_input(recorded_audio, "录音")
-                    st.rerun()
-                if rec_col2.button(
-                    "转写并提交回答",
-                    width="stretch",
-                    disabled=recorded_audio is None
-                    or not st.session_state.session_started
-                    or st.session_state.current_round >= MAX_TRAINING_ROUNDS,
-                ):
-                    if transcribe_to_input(recorded_audio, "录音"):
-                        submit_user_answer(
-                            normalize_user_input(st.session_state.voice_transcript),
-                            scenario_key,
-                            scenario,
-                            difficulty,
-                            audio_used=True,
-                            voice_profile=st.session_state.voice_profile,
-                        )
+            render_chat_history(st.session_state.conversation_history, height=430)
+
+            render_input_header(round_full, st.session_state.get("recording_status") or st.session_state.get("voice_status", ""))
+
+            if st.session_state.pending_user_input:
+                st.session_state.input_text = st.session_state.pending_user_input
+                st.session_state.user_input = st.session_state.pending_user_input
+                st.session_state.pending_user_input = ""
+            if st.session_state.get("pending_input_clear"):
+                st.session_state.input_text = ""
+                st.session_state.user_input = ""
+                st.session_state.pending_input_clear = False
+
+            if st.session_state.input_mode not in {"text", "voice"}:
+                st.session_state.input_mode = "text"
+            submitted = False
+            user_text = st.session_state.input_text
+
+            if st.session_state.input_mode == "text":
+                mode_col, answer_col, send_col = st.columns([0.12, 0.70, 0.18])
+                with mode_col:
+                    if st.button("语音", width="stretch"):
+                        st.session_state.input_mode = "voice"
                         st.rerun()
-
-                uploaded_file = st.file_uploader(
-                    "上传音频文件（可选）",
-                    type=SUPPORTED_AUDIO_TYPES,
-                    help="支持 wav、mp3、m4a。若本地语音模型不可用，系统会自动降级到文本输入。",
-                )
-                file_col1, file_col2 = st.columns([1, 1])
-                if file_col1.button("转写文件", width="stretch", disabled=uploaded_file is None):
-                    transcribe_to_input(uploaded_file, "音频文件")
-                    st.rerun()
-                if file_col2.button(
-                    "转写文件并提交",
-                    width="stretch",
-                    disabled=uploaded_file is None
-                    or not st.session_state.session_started
-                    or st.session_state.current_round >= MAX_TRAINING_ROUNDS,
-                ):
-                    if transcribe_to_input(uploaded_file, "音频文件"):
-                        submit_user_answer(
-                            normalize_user_input(st.session_state.voice_transcript),
-                            scenario_key,
-                            scenario,
-                            difficulty,
-                            audio_used=True,
-                            voice_profile=st.session_state.voice_profile,
-                        )
+                with answer_col:
+                    user_text = st.text_input(
+                        "用户英文输入",
+                        key="input_text",
+                        placeholder="输入英文回答，Enter 发送",
+                        label_visibility="collapsed",
+                        disabled=not st.session_state.session_started or round_full,
+                    )
+                    render_enter_submit_bridge()
+                with send_col:
+                    st.toggle(
+                        "朗读",
+                        key="voice_reply_enabled",
+                    )
+                    submitted = st.button(
+                        "发送",
+                        type="primary",
+                        width="stretch",
+                        disabled=not st.session_state.session_started or round_full,
+                    )
+            else:
+                mode_col, voice_col, send_col = st.columns([0.12, 0.70, 0.18])
+                with mode_col:
+                    if st.button("键盘", width="stretch"):
+                        st.session_state.input_mode = "text"
                         st.rerun()
-
-                if st.session_state.voice_status:
-                    st.caption(st.session_state.voice_status)
-                if st.session_state.voice_transcript:
-                    st.info(f"最近转写：{st.session_state.voice_transcript}")
-
-            button_col2 = st.container()
-            can_summarize = st.session_state.current_round >= MIN_SUMMARY_ROUNDS
-            if button_col2.button("生成课后总结", width="stretch", disabled=not can_summarize):
-                if not can_summarize:
-                    st.warning(f"请至少完成 {MIN_SUMMARY_ROUNDS} 轮对话后再生成总结。")
-                else:
-                    summary_history = history_for_summary(st.session_state.conversation_history)
-                    combined_feedback = {
-                        "issue_explanation": [
-                            issue
-                            for feedback in st.session_state.feedback_history
-                            for issue in feedback.get("issue_explanation", [])
-                        ]
-                    }
-                    combined_score = {"total_score": average_score(st.session_state.score_history)}
-                    summary = generate_lesson_summary(
-                        summary_history,
-                        scenario,
-                        difficulty,
-                        combined_feedback,
-                        combined_score,
+                with voice_col:
+                    recorded_audio = st.audio_input(
+                        "语音回答",
+                        key="recorded_answer",
+                        label_visibility="collapsed",
                     )
-                    st.session_state.latest_summary = summary
-                    summary_path = save_markdown_summary(summary)
-                    st.session_state.latest_summary_path = str(summary_path)
-                    record = build_session_record(
-                        scenario,
-                        difficulty,
-                        st.session_state.conversation_history,
-                        st.session_state.feedback_history,
-                        st.session_state.score_history,
-                        summary,
+                    if st.session_state.voice_transcript:
+                        st.markdown(
+                            f'<div class="coach-voice-status">最近转写：{escape_text(st.session_state.voice_transcript)}</div>',
+                            unsafe_allow_html=True,
+                        )
+                with send_col:
+                    st.toggle(
+                        "朗读",
+                        key="voice_reply_enabled",
                     )
-                    record_path = save_or_update_practice_record(record, st.session_state.current_session_path)
-                    st.session_state.current_session_path = str(record_path)
-                    st.session_state.current_record_path = str(record_path)
-                    update_error_book(record)
-                    st.success(f"课后总结已生成：{Path(summary_path).name}")
-
+                    if st.button("转文字", width="stretch", disabled=recorded_audio is None):
+                        if transcribe_to_input(recorded_audio, "录音"):
+                            st.session_state.input_mode = "text"
+                        st.rerun()
+                    if st.button(
+                        "发送语音",
+                        type="primary",
+                        width="stretch",
+                        disabled=recorded_audio is None
+                        or not st.session_state.session_started
+                        or round_full,
+                    ):
+                        if transcribe_to_input(recorded_audio, "录音"):
+                            submit_user_answer(
+                                normalize_user_input(st.session_state.voice_transcript),
+                                scenario_key,
+                                scenario,
+                                difficulty,
+                                audio_used=True,
+                                voice_profile=st.session_state.voice_profile,
+                            )
+                            st.rerun()
             if submitted:
-                clean_text = normalize_user_input(user_text)
+                bridged_text = consume_enter_submit_text()
+                clean_text = normalize_user_input(bridged_text or user_text)
                 if submit_user_answer(clean_text, scenario_key, scenario, difficulty, audio_used=False, voice_profile={}):
                     st.rerun()
 
-            st.subheader("对话历史")
-            if not st.session_state.conversation_history:
-                st.markdown(
-                    """
-                    <div class="empty-panel">
-                      <strong>还没有对话记录</strong>
-                      <span>点击开始练习后，AI 会主动提出第一个问题。</span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            for item in st.session_state.conversation_history:
-                with st.chat_message(item["role"]):
-                    if item.get("stage"):
-                        st.caption(item["stage"])
-                    st.write(item["content"])
-            if st.session_state.current_round >= MIN_SUMMARY_ROUNDS and not st.session_state.latest_summary:
-                st.info("已完成 5 轮训练，可以生成课后总结。")
-
+    else:
         with right:
-            st.subheader("本轮 AI 追问")
-            if st.session_state.last_ai_reply:
-                st.success(st.session_state.last_ai_reply)
-                render_ai_voice_reply(st.session_state.last_ai_reply)
-            else:
+            if st.session_state.active_view == "summary":
                 st.markdown(
-                    """
-                    <div class="empty-panel">
-                      <strong>等待 AI 角色回复</strong>
-                      <span>提交练习后会显示贴合当前场景的追问。</span>
+                    f"""
+                    <div class="coach-analysis-card">
+                      <h3>报告信息</h3>
+                      <div class="coach-field"><span>场景</span><div>{escape_text(scenario.get("cn_label", ""))}</div></div>
+                      <div class="coach-field"><span>难度</span><div>{escape_text(difficulty)}</div></div>
+                      <div class="coach-field"><span>轮次</span><div>{st.session_state.current_round}</div></div>
+                      <div class="coach-field"><span>平均分</span><div>{average or 0}/100</div></div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
-
-            st.subheader("纠错反馈")
-            render_feedback(st.session_state.last_feedback)
-
-            st.subheader("评分")
-            if st.session_state.last_score:
-                render_score(st.session_state.last_score)
             else:
-                st.markdown(
-                    """
-                    <div class="empty-panel">
-                      <strong>等待评分</strong>
-                      <span>提交练习后显示综合分和五个维度评分。</span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+                render_analysis_panel(
+                    st.session_state.last_ai_reply,
+                    st.session_state.last_feedback,
+                    st.session_state.last_score,
+                    st.session_state.latest_suggestion,
+                    average,
                 )
 
-            if st.session_state.latest_summary:
-                st.subheader("本次总结")
-                st.markdown(st.session_state.latest_summary)
-            if st.session_state.score_history:
-                st.caption(f"会话平均分：{average_score(st.session_state.score_history)}/100")
-
-        st.divider()
-        summary_col, expression_col = st.columns([1.4, 1])
-        with summary_col:
-            st.subheader("课后总结")
-            if st.session_state.latest_summary:
-                st.markdown(st.session_state.latest_summary)
-                if st.session_state.latest_summary_path:
-                    summary_path = Path(st.session_state.latest_summary_path)
-                    if summary_path.exists():
-                        st.download_button(
-                            "导出 Markdown 报告",
-                            data=summary_path.read_text(encoding="utf-8").encode("utf-8"),
-                            file_name=summary_path.name,
-                            mime="text/markdown",
-                            width="stretch",
-                        )
+        with center:
+            if st.session_state.active_view == "history":
+                render_history_tab()
+            elif st.session_state.active_view == "analytics":
+                render_analytics_tab()
+            elif st.session_state.active_view == "summary":
+                back_col, download_col = st.columns([1, 1])
+                with back_col:
+                    if st.button("返回练习", width="stretch"):
+                        st.session_state.active_view = "practice"
+                        st.rerun()
+                with download_col:
+                    if st.session_state.latest_summary_path:
+                        summary_path = Path(st.session_state.latest_summary_path)
+                        if summary_path.exists():
+                            st.download_button(
+                                "导出 Markdown 报告",
+                                data=summary_path.read_text(encoding="utf-8").encode("utf-8"),
+                                file_name=summary_path.name,
+                                mime="text/markdown",
+                                width="stretch",
+                            )
+                render_summary_report(
+                    st.session_state.latest_summary,
+                    scenario.get("cn_label", ""),
+                    difficulty,
+                    st.session_state.current_round,
+                    average or 0,
+                )
+            elif st.session_state.active_view == "report":
+                render_report_tab()
+            elif st.session_state.active_view == "settings":
+                render_settings_tab(mode_label)
             else:
-                st.info(f"完成至少 {MIN_SUMMARY_ROUNDS} 轮后，可在输入区生成课后总结。")
-        with expression_col:
-            st.subheader("推荐表达")
-            for expression in scenario.get("recommended_expressions", []):
-                st.write(f"- {expression}")
-            if st.session_state.last_feedback:
-                st.write("**本轮可替代表达**")
-                for expression in st.session_state.last_feedback.get("alternative_expressions", []):
-                    st.write(f"- {expression}")
-
-    with history_tab:
-        render_history_tab()
-
-    with analytics_tab:
-        render_analytics_tab()
-
-    with report_tab:
-        render_report_tab()
-
-    with settings_tab:
-        render_settings_tab(mode_label)
+                st.session_state.active_view = "practice"
+                st.rerun()
 
 
 if __name__ == "__main__":
