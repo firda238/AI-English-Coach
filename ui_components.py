@@ -2081,6 +2081,135 @@ def inject_chat_shell_css() -> None:
             text-align: left !important;
             font-size: 9px !important;
         }}
+
+        /* Taste Skill redesign pass: double-bezel surfaces and cockpit hierarchy. */
+        .coach-left-rail,
+        .coach-goal-card,
+        .coach-statusbar,
+        .coach-input-shell,
+        .coach-insight-panel,
+        .coach-voice-tools-card {{
+            position: relative !important;
+            isolation: isolate !important;
+            overflow: hidden !important;
+        }}
+        .coach-left-rail::before,
+        .coach-goal-card::before,
+        .coach-statusbar::before,
+        .coach-input-shell::before,
+        .coach-insight-panel::before,
+        .coach-voice-tools-card::before {{
+            content: "" !important;
+            position: absolute !important;
+            inset: 1px !important;
+            z-index: 0 !important;
+            pointer-events: none !important;
+            border-radius: calc(1em - 1px) !important;
+            border: 1px solid color-mix(in srgb, var(--coach-text) 3.5%, transparent) !important;
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, var(--coach-text) 8%, transparent),
+                inset 0 0 22px color-mix(in srgb, var(--coach-accent) 3.5%, transparent) !important;
+        }}
+        .coach-left-rail > *,
+        .coach-goal-card > *,
+        .coach-statusbar > *,
+        .coach-input-shell > *,
+        .coach-insight-panel > *,
+        .coach-voice-tools-card > * {{
+            position: relative !important;
+            z-index: 1 !important;
+        }}
+        .coach-statusbar {{
+            grid-template-columns: minmax(0, 1fr) minmax(292px, auto) !important;
+            padding-top: 16px !important;
+        }}
+        .coach-window-chrome {{
+            position: absolute !important;
+            top: 8px !important;
+            left: 12px !important;
+            display: inline-flex !important;
+            gap: 5px !important;
+            align-items: center !important;
+            pointer-events: none !important;
+        }}
+        .coach-window-chrome span {{
+            width: 6px !important;
+            height: 6px !important;
+            border-radius: 999px !important;
+            background: color-mix(in srgb, var(--coach-muted) 42%, transparent) !important;
+            border: 1px solid color-mix(in srgb, var(--coach-text) 6%, transparent) !important;
+        }}
+        .coach-window-chrome span:first-child {{
+            background: color-mix(in srgb, var(--coach-accent) 72%, transparent) !important;
+        }}
+        .coach-topbar-kicker {{
+            margin-top: 3px !important;
+        }}
+        .coach-topbar-meta span {{
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, var(--coach-text) 4%, transparent),
+                0 6px 16px rgba(0,0,0,0.10) !important;
+        }}
+        div[data-testid="stColumn"]:has(.coach-brand-card) .stButton > button p {{
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 7px !important;
+            letter-spacing: 0 !important;
+        }}
+        div[data-testid="stColumn"]:has(.coach-brand-card) .stButton > button[data-testid="stBaseButton-primary"] {{
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--coach-primary) 96%, #fff 5%), color-mix(in srgb, var(--coach-primary) 82%, #000 8%)) !important;
+        }}
+        .coach-insight-head {{
+            align-items: flex-start !important;
+        }}
+        .coach-insight-kicker {{
+            display: block !important;
+            margin-bottom: 4px !important;
+            color: var(--coach-accent) !important;
+            font-size: 8.8px !important;
+            line-height: 1 !important;
+            font-weight: 820 !important;
+            letter-spacing: 0.08em !important;
+            text-transform: uppercase !important;
+        }}
+        .coach-insight-head h3 {{
+            margin: 0 !important;
+        }}
+        .coach-insight-detail {{
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, var(--coach-text) 4%, transparent),
+                0 18px 46px rgba(0,0,0,0.18) !important;
+        }}
+        .coach-input-shell {{
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, var(--coach-text) 4%, transparent),
+                0 -10px 38px rgba(0,0,0,0.18) !important;
+        }}
+        .stTextInput input:focus,
+        input[aria-label="用户英文输入"]:focus {{
+            border-color: color-mix(in srgb, var(--coach-accent) 42%, var(--coach-border)) !important;
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, var(--coach-text) 6%, transparent),
+                0 0 0 3px color-mix(in srgb, var(--coach-accent) 10%, transparent) !important;
+        }}
+        @media (prefers-reduced-transparency: reduce) {{
+            .coach-shell-card,
+            .coach-goal-card,
+            .coach-stage-card,
+            .coach-statusbar,
+            .coach-input-shell,
+            .coach-analysis-card,
+            .coach-summary-card,
+            .coach-insight-panel,
+            .voice-lab-card,
+            [data-testid="stAudioInput"],
+            [data-testid="stFileUploader"] {{
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                background: var(--coach-panel) !important;
+            }}
+        }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -2159,6 +2288,9 @@ def render_chat_status_bar(
     st.markdown(
         f"""
         <div class="coach-statusbar">
+          <div class="coach-window-chrome">
+            <span></span><span></span><span></span>
+          </div>
           <div class="coach-topbar-main">
             <div class="coach-topbar-kicker">AI4COACH 训练终端</div>
             <div class="coach-topbar-title">进入你的口语训练席位</div>
@@ -2482,7 +2614,10 @@ def render_analysis_panel(
         f"""
         <div class="coach-insight-panel">
           <div class="coach-insight-head">
-            <h3>学习雷达</h3>
+            <div>
+              <span class="coach-insight-kicker">Coach Review</span>
+              <h3>学习雷达</h3>
+            </div>
             <span>{esc(average) + "/100" if average is not None else "待评分"}</span>
           </div>
           <div class="coach-insight-section">

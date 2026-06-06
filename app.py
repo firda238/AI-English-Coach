@@ -1219,11 +1219,11 @@ def main() -> None:
         if not collapsed:
             st.markdown('<div class="coach-nav-label">导航</div>', unsafe_allow_html=True)
         view_defs = [
-            ("practice", "练习终端", "练习"),
-            ("history", "历史记录", "历史"),
-            ("analytics", "学习数据", "统计"),
-            ("report", "报告中心", "报告"),
-            ("settings", "运行设置", "设置"),
+            ("practice", "01 练习终端", "练习"),
+            ("history", "02 历史记录", "历史"),
+            ("analytics", "03 学习数据", "统计"),
+            ("report", "04 报告中心", "报告"),
+            ("settings", "05 运行设置", "设置"),
         ]
         for view_key, full_label, short_label in view_defs:
             button_label = short_label if collapsed else full_label
