@@ -95,6 +95,14 @@ def inject_chat_shell_css() -> None:
             min-height: 68px !important;
             line-height: 1.5 !important;
             resize: vertical;
+            caret-color: var(--coach-accent) !important;
+            white-space: pre-wrap !important;
+            overflow-wrap: anywhere !important;
+        }
+        textarea:focus,
+        input:focus {
+            border-color: var(--coach-accent) !important;
+            box-shadow: 0 0 0 1px var(--coach-accent-soft) !important;
         }
         .stButton > button,
         .stDownloadButton > button {
@@ -493,27 +501,6 @@ def inject_chat_shell_css() -> None:
         """,
         unsafe_allow_html=True,
     )
-    components.html(
-        """
-        <script>
-        function lockCoachScroll() {
-            const main = window.parent.document.querySelector('[data-testid="stMainBlockContainer"]');
-            if (main) {
-                main.style.scrollBehavior = "auto";
-                main.scrollTop = 0;
-            }
-            window.parent.scrollTo(0, 0);
-        }
-        lockCoachScroll();
-        window.parent.requestAnimationFrame(lockCoachScroll);
-        window.parent.setTimeout(lockCoachScroll, 80);
-        window.parent.setTimeout(lockCoachScroll, 300);
-        window.parent.setTimeout(lockCoachScroll, 900);
-        </script>
-        """,
-        height=0,
-        width=0,
-    )
     is_light = st.session_state.get("theme_mode") == "light"
     theme = {
         "bg": "#d9dde3" if is_light else "#070b10",
@@ -560,9 +547,9 @@ def inject_chat_shell_css() -> None:
         [data-testid="stAppViewContainer"],
         [data-testid="stMain"],
         [data-testid="stMainBlockContainer"] {{
-            height: 100vh !important;
-            max-height: 100vh !important;
-            overflow: hidden !important;
+            min-height: 100vh !important;
+            max-height: none !important;
+            overflow-x: hidden !important;
         }}
         [data-testid="stMain"] {{
             align-items: flex-start !important;
@@ -572,14 +559,14 @@ def inject_chat_shell_css() -> None:
             color: var(--coach-text) !important;
         }}
         .block-container {{
-            height: 100vh !important;
-            max-height: 100vh !important;
+            min-height: 100vh !important;
+            max-height: none !important;
             padding: 0.25rem 0.65rem !important;
-            overflow: hidden !important;
+            overflow: visible !important;
         }}
         .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child {{
-            height: calc(100vh - 0.5rem) !important;
-            overflow: hidden !important;
+            min-height: calc(100vh - 0.5rem) !important;
+            overflow: visible !important;
             align-items: stretch !important;
         }}
         div[data-testid="column"] {{
@@ -588,7 +575,7 @@ def inject_chat_shell_css() -> None:
         div[data-testid="column"] > div {{
             min-width: 0 !important;
             height: 100% !important;
-            overflow: hidden !important;
+            overflow: visible !important;
         }}
         div[data-testid="column"] > div > div[data-testid="stVerticalBlock"] {{
             gap: 0.42rem !important;
@@ -711,8 +698,12 @@ def inject_chat_shell_css() -> None:
             font-size: 12px !important;
         }}
         textarea {{
-            min-height: 58px !important;
+            min-height: 72px !important;
             resize: none !important;
+            line-height: 1.45 !important;
+            white-space: pre-wrap !important;
+            overflow-wrap: anywhere !important;
+            caret-color: var(--coach-accent) !important;
         }}
         textarea::placeholder,
         input::placeholder {{
@@ -1119,11 +1110,14 @@ def inject_chat_shell_css() -> None:
             background: color-mix(in srgb, var(--coach-button) 86%, transparent) !important;
         }}
         .stTextArea textarea {{
-            min-height: 42px !important;
+            min-height: 72px !important;
             padding: 9px 12px !important;
             border-radius: 0 0 13px 13px !important;
             background: color-mix(in srgb, var(--coach-panel-3) 90%, transparent) !important;
             box-shadow: inset 0 1px 0 color-mix(in srgb, var(--coach-text) 7%, transparent) !important;
+            line-height: 1.45 !important;
+            white-space: pre-wrap !important;
+            overflow-wrap: anywhere !important;
         }}
         .stSelectbox div[data-baseweb="select"] > div,
         input {{
@@ -1361,17 +1355,23 @@ def inject_chat_shell_css() -> None:
             border-color: color-mix(in srgb, var(--coach-primary) 72%, var(--coach-border)) !important;
         }}
         .stTextArea textarea {{
-            min-height: 42px !important;
-            height: 42px !important;
+            min-height: 72px !important;
+            height: 72px !important;
             border-radius: 0 0 13px 13px !important;
             border-top-color: transparent !important;
+            padding: 10px 12px !important;
         }}
-        input[aria-label="用户英文输入"] {{
-            min-height: 42px !important;
-            height: 42px !important;
+        input[aria-label="用户英文输入"],
+        textarea[aria-label="用户英文输入"] {{
+            min-height: 72px !important;
+            height: 72px !important;
             border-radius: 0 0 13px 13px !important;
             border-top-color: transparent !important;
-            padding: 0 12px !important;
+            padding: 10px 12px !important;
+            line-height: 1.45 !important;
+            white-space: pre-wrap !important;
+            overflow-wrap: anywhere !important;
+            caret-color: var(--coach-accent) !important;
         }}
         .coach-input-shell {{
             padding: 0 !important;
@@ -1855,9 +1855,10 @@ def inject_chat_shell_css() -> None:
             padding: 8px !important;
         }}
         .stTextInput input,
-        input[aria-label="用户英文输入"] {{
-            height: 40px !important;
-            min-height: 40px !important;
+        input[aria-label="用户英文输入"],
+        textarea[aria-label="用户英文输入"] {{
+            height: 72px !important;
+            min-height: 72px !important;
             border-radius: 13px !important;
             font-size: 12px !important;
         }}
@@ -2187,7 +2188,8 @@ def inject_chat_shell_css() -> None:
                 0 -10px 38px rgba(0,0,0,0.18) !important;
         }}
         .stTextInput input:focus,
-        input[aria-label="用户英文输入"]:focus {{
+        input[aria-label="用户英文输入"]:focus,
+        textarea[aria-label="用户英文输入"]:focus {{
             border-color: color-mix(in srgb, var(--coach-accent) 42%, var(--coach-border)) !important;
             box-shadow:
                 inset 0 1px 0 color-mix(in srgb, var(--coach-text) 6%, transparent),

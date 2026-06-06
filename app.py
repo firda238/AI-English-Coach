@@ -502,15 +502,22 @@ def submit_user_answer(
     voice_profile: dict | None = None,
 ) -> bool:
     """Submit one answer through the shared multi-turn conversation flow."""
-    if not st.session_state.session_started:
-        st.warning("请先点击“开始练习”，让 AI 提出第一个问题。")
-        return False
     if st.session_state.current_round >= MAX_TRAINING_ROUNDS:
         st.warning("本次训练已达到 8 轮上限，可以生成课后总结或清空后重新开始。")
         return False
     if not clean_text:
         st.warning("请输入或转写英文句子后再提交。")
         return False
+    if not st.session_state.session_started:
+        st.session_state.current_stage_key = f"{scenario_key}:{difficulty}"
+        if not st.session_state.conversation_history:
+            opening = build_opening_question(scenario_key, difficulty)
+            lesson = stage_progress(scenario_key, 0)
+            st.session_state.conversation_history.append(
+                {"role": "assistant", "content": opening, "stage": lesson["current_step"]["title"]}
+            )
+            st.session_state.last_ai_reply = opening
+        st.session_state.session_started = True
 
     result = process_user_turn(
         clean_text,
@@ -731,7 +738,8 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
         }}
 
         function answerBox() {{
-            return window.parent.document.querySelector('textarea[aria-label="用户英文输入"]');
+            return window.parent.document.querySelector('input[aria-label="用户英文输入"]') ||
+                window.parent.document.querySelector('textarea[aria-label="用户英文输入"]');
         }}
 
         function writeToStreamlitTextarea(text) {{
@@ -740,10 +748,10 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
                 setStatus("未找到输入框", "error");
                 return false;
             }}
-            const setter = Object.getOwnPropertyDescriptor(
-                window.parent.HTMLTextAreaElement.prototype,
-                "value"
-            ).set;
+            const prototype = target.tagName === "TEXTAREA"
+                ? window.parent.HTMLTextAreaElement.prototype
+                : window.parent.HTMLInputElement.prototype;
+            const setter = Object.getOwnPropertyDescriptor(prototype, "value").set;
             setter.call(target, text);
             target.dispatchEvent(new Event("input", {{ bubbles: true }}));
             target.dispatchEvent(new Event("change", {{ bubbles: true }}));
@@ -898,7 +906,7 @@ def render_browser_speech_dictation(disabled: bool = False) -> None:
 
 
 def render_enter_submit_bridge() -> None:
-    """Submit the text answer with Enter while preserving click-submit behavior."""
+    """Keep Enter and button submit in sync with the current browser input value."""
     components.html(
         """
         <script>
@@ -907,26 +915,45 @@ def render_enter_submit_bridge() -> None:
             const answerInput =
                 doc.querySelector('input[aria-label="用户英文输入"]') ||
                 doc.querySelector('textarea[aria-label="用户英文输入"]');
-            if (!answerInput || answerInput.dataset.coachEnterBound === "1") return;
-            answerInput.dataset.coachEnterBound = "1";
-            answerInput.addEventListener("keydown", (event) => {
-                if (event.key !== "Enter" || event.shiftKey) return;
-                event.preventDefault();
+            const sendButton = [...doc.querySelectorAll("button")].find((button) =>
+                button.innerText.trim() === "发送" &&
+                button.getBoundingClientRect().width > 0 &&
+                button.getBoundingClientRect().height > 0
+            );
+
+            function syncAnswerToUrl() {
+                if (!answerInput) return false;
                 const currentValue = answerInput.value || "";
                 if (!currentValue.trim()) return;
                 const url = new URL(window.parent.location.href);
                 url.searchParams.set("coach_enter_submit", currentValue);
                 window.parent.history.replaceState(null, "", url.toString());
-                window.parent.setTimeout(() => {
-                    const sendButton = [...doc.querySelectorAll("button")].find((button) =>
-                        button.innerText.trim() === "发送" &&
-                        !button.disabled &&
-                        button.getBoundingClientRect().width > 0 &&
-                        button.getBoundingClientRect().height > 0
-                    );
-                    if (sendButton) sendButton.click();
-                }, 140);
-            });
+                return true;
+            }
+
+            if (answerInput && answerInput.dataset.coachEnterBound !== "1") {
+                answerInput.dataset.coachEnterBound = "1";
+                answerInput.addEventListener("keydown", (event) => {
+                    if (event.key !== "Enter" || event.shiftKey) return;
+                    event.preventDefault();
+                    if (!syncAnswerToUrl()) return;
+                    window.parent.setTimeout(() => {
+                        const freshSendButton = [...doc.querySelectorAll("button")].find((button) =>
+                            button.innerText.trim() === "发送" &&
+                            !button.disabled &&
+                            button.getBoundingClientRect().width > 0 &&
+                            button.getBoundingClientRect().height > 0
+                        );
+                        if (freshSendButton) freshSendButton.click();
+                    }, 140);
+                });
+            }
+
+            if (sendButton && sendButton.dataset.coachClickBound !== "1") {
+                sendButton.dataset.coachClickBound = "1";
+                sendButton.addEventListener("pointerdown", syncAnswerToUrl, { capture: true });
+                sendButton.addEventListener("click", syncAnswerToUrl, { capture: true });
+            }
         }
         bindEnterSubmit();
         window.parent.requestAnimationFrame(bindEnterSubmit);
@@ -937,7 +964,6 @@ def render_enter_submit_bridge() -> None:
         height=0,
         width=0,
     )
-
 
 def render_voice_tools_panel(
     disabled: bool,
@@ -1331,7 +1357,7 @@ def main() -> None:
             )
             render_ai_voice_reply(st.session_state.last_ai_reply)
             render_voice_tools_panel(
-                disabled=not st.session_state.session_started or round_full,
+                disabled=round_full,
                 scenario_key=scenario_key,
                 scenario=scenario,
                 difficulty=difficulty,
@@ -1371,12 +1397,13 @@ def main() -> None:
                         st.session_state.input_mode = "voice"
                         st.rerun()
                 with answer_col:
-                    user_text = st.text_input(
+                    user_text = st.text_area(
                         "用户英文输入",
                         key="input_text",
-                        placeholder="输入英文回答，Enter 发送",
+                        placeholder="在这里输入英文回答，Enter 发送；长句会自动换行",
                         label_visibility="collapsed",
-                        disabled=not st.session_state.session_started or round_full,
+                        height=76,
+                        disabled=round_full,
                     )
                     render_enter_submit_bridge()
                 with send_col:
@@ -1388,7 +1415,7 @@ def main() -> None:
                         "发送",
                         type="primary",
                         width="stretch",
-                        disabled=not st.session_state.session_started or round_full,
+                        disabled=round_full,
                     )
             else:
                 mode_col, voice_col, send_col = st.columns([0.12, 0.70, 0.18])
@@ -1421,7 +1448,6 @@ def main() -> None:
                         type="primary",
                         width="stretch",
                         disabled=recorded_audio is None
-                        or not st.session_state.session_started
                         or round_full,
                     ):
                         if transcribe_to_input(recorded_audio, "录音"):
