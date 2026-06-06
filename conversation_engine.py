@@ -12,6 +12,12 @@ from feedback import build_turn_response
 MIN_SUMMARY_ROUNDS = 5
 MAX_TRAINING_ROUNDS = 8
 
+COMPLETION_REPLIES = {
+    "interview": "Great work. You have completed the five interview rounds. You can generate your summary now, or add one final detail about why you are a good fit.",
+    "restaurant": "Great work. You have completed the ordering practice. You can generate your summary now, or add one final polite request to finish the conversation.",
+    "meeting": "Great work. You have completed the meeting practice. You can generate your summary now, or add one final action item for the team.",
+}
+
 DEMO_ANSWERS = {
     "interview": [
         "I am a computer science student, and I am interested in software development and English communication.",
@@ -102,6 +108,11 @@ def process_user_turn(
         next_stage=next_stage,
     )
     new_round = current_round + 1
+    if new_round >= MIN_SUMMARY_ROUNDS:
+        turn["ai_reply"] = COMPLETION_REPLIES.get(
+            scenario_key,
+            "Great work. You have completed the five-round practice. You can generate your summary now, or add one final detail for extra practice.",
+        )
     return {
         "turn": turn,
         "stage": stage,
