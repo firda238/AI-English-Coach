@@ -1453,6 +1453,7 @@ def main() -> None:
                 width="stretch",
             ):
                 st.session_state.active_view = view_key
+                st.rerun()
 
         scenario_key = st.session_state.selected_scenario
         scenario = get_scenario(scenario_key)
