@@ -1872,6 +1872,162 @@ def inject_chat_shell_css() -> None:
             background: var(--coach-accent-soft) !important;
             color: var(--coach-text) !important;
         }}
+
+        /* Compact navigation rail, modeled after the reference sidebar. */
+        .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child > div[data-testid="stColumn"]:first-child > div {{
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            padding-right: 2px !important;
+            scrollbar-width: thin !important;
+            scrollbar-color: color-mix(in srgb, var(--coach-accent) 34%, transparent) transparent !important;
+        }}
+        .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child > div[data-testid="stColumn"]:last-child > div {{
+            overflow: hidden !important;
+        }}
+        .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child {{
+            column-gap: 0.58rem !important;
+        }}
+        .coach-left-rail {{
+            margin-bottom: 5px !important;
+            padding: 8px !important;
+            border-radius: 15px !important;
+            text-align: left !important;
+        }}
+        .coach-brand-card {{
+            min-height: 58px !important;
+        }}
+        .coach-brand-row {{
+            gap: 6px !important;
+        }}
+        .coach-logo-line {{
+            gap: 7px !important;
+        }}
+        .coach-logo-mark,
+        .coach-collapsed-logo {{
+            width: 28px !important;
+            height: 28px !important;
+            border-radius: 9px !important;
+            font-size: 10px !important;
+        }}
+        .coach-brand-title {{
+            font-size: 11.6px !important;
+            line-height: 1.16 !important;
+            white-space: normal !important;
+            overflow-wrap: anywhere !important;
+        }}
+        .coach-brand-subtitle {{
+            font-size: 8.8px !important;
+            line-height: 1.18 !important;
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+        }}
+        .coach-status-pill {{
+            flex: 0 0 auto !important;
+            padding: 3px 5px !important;
+            font-size: 8.6px !important;
+        }}
+        .coach-nav-label,
+        .coach-rail-label {{
+            margin: 3px 2px 4px !important;
+            font-size: 9px !important;
+            text-align: left !important;
+        }}
+        .coach-mode-card {{
+            margin-top: 5px !important;
+            padding: 7px 8px !important;
+            border-radius: 12px !important;
+            text-align: left !important;
+        }}
+        .coach-mode-card strong {{
+            font-size: 10.5px !important;
+        }}
+        .coach-mode-card span {{
+            font-size: 8.8px !important;
+            white-space: normal !important;
+            overflow-wrap: anywhere !important;
+        }}
+        .coach-goal-card {{
+            padding: 8px !important;
+            max-height: none !important;
+            border-radius: 13px !important;
+            text-align: left !important;
+        }}
+        .coach-goal-card .coach-card-head,
+        .coach-goal-card .coach-stage-head {{
+            margin-bottom: 4px !important;
+        }}
+        .coach-goal-card .coach-card-head strong,
+        .coach-stage-head strong {{
+            font-size: 11px !important;
+            line-height: 1.14 !important;
+        }}
+        .coach-goal-card .coach-card-head span,
+        .coach-stage-head span {{
+            font-size: 8.8px !important;
+        }}
+        .coach-goal-card p {{
+            margin-top: 5px !important;
+            font-size: 9.4px !important;
+            line-height: 1.24 !important;
+            display: block !important;
+            -webkit-line-clamp: unset !important;
+            overflow: visible !important;
+            overflow-wrap: anywhere !important;
+        }}
+        .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child > div[data-testid="stColumn"]:first-child .stButton > button {{
+            justify-content: flex-start !important;
+            text-align: left !important;
+            height: auto !important;
+            min-height: 27px !important;
+            padding: 5px 9px !important;
+            border-radius: 12px !important;
+        }}
+        .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child > div[data-testid="stColumn"]:first-child .stButton > button p {{
+            width: 100% !important;
+            text-align: left !important;
+            white-space: normal !important;
+            line-height: 1.12 !important;
+            overflow-wrap: anywhere !important;
+        }}
+        .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child > div[data-testid="stColumn"]:first-child [data-testid="stSelectbox"] {{
+            margin-bottom: 3px !important;
+        }}
+        .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child > div[data-testid="stColumn"]:first-child [data-baseweb="select"] > div {{
+            min-height: 30px !important;
+            border-radius: 11px !important;
+        }}
+        .block-container > div > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:first-child > div[data-testid="stColumn"]:first-child label {{
+            text-align: left !important;
+            font-size: 9px !important;
+        }}
+        div[data-testid="stColumn"]:has(.coach-brand-card) > div[data-testid="stVerticalBlock"] {{
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            scrollbar-width: thin !important;
+            scrollbar-color: color-mix(in srgb, var(--coach-accent) 34%, transparent) transparent !important;
+        }}
+        div[data-testid="stLayoutWrapper"] > div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:last-child > div[data-testid="stVerticalBlock"] {{
+            overflow: hidden !important;
+        }}
+        div[data-testid="stColumn"]:has(.coach-brand-card) .stButton > button {{
+            justify-content: flex-start !important;
+            text-align: left !important;
+            height: auto !important;
+            min-height: 27px !important;
+            padding: 5px 9px !important;
+        }}
+        div[data-testid="stColumn"]:has(.coach-brand-card) .stButton > button p {{
+            width: 100% !important;
+            text-align: left !important;
+            white-space: normal !important;
+            line-height: 1.12 !important;
+            overflow-wrap: anywhere !important;
+        }}
+        div[data-testid="stColumn"]:has(.coach-brand-card) label {{
+            text-align: left !important;
+            font-size: 9px !important;
+        }}
         </style>
         """,
         unsafe_allow_html=True,

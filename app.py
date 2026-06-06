@@ -1207,8 +1207,8 @@ def main() -> None:
         st.session_state.selected_difficulty = get_scenario(st.session_state.selected_scenario)["default_difficulty"]
 
     collapsed = bool(st.session_state.sidebar_collapsed)
-    layout = [0.08, 0.66, 0.26] if collapsed else [0.18, 0.58, 0.24]
-    left_rail, center, right = st.columns(layout, gap="medium")
+    layout = [0.07, 0.68, 0.25] if collapsed else [0.16, 0.60, 0.24]
+    left_rail, center, right = st.columns(layout, gap="small")
 
     with left_rail:
         render_left_brand(mode_label, collapsed)
