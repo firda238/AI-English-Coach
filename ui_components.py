@@ -1561,6 +1561,19 @@ def inject_chat_shell_css() -> None:
                 radial-gradient(circle at 8% 18%, color-mix(in srgb, var(--coach-text) 7%, transparent), transparent 30%),
                 linear-gradient(135deg, color-mix(in srgb, var(--coach-bg) 92%, #000 8%), var(--coach-bg) 62%, color-mix(in srgb, var(--coach-bg) 88%, var(--coach-accent) 4%)) !important;
         }}
+        .stApp::after {{
+            content: "" !important;
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 0 !important;
+            pointer-events: none !important;
+            opacity: 0.022 !important;
+            background-image:
+                radial-gradient(circle at 20% 20%, var(--coach-text) 0 0.38px, transparent 0.7px),
+                radial-gradient(circle at 80% 70%, var(--coach-accent) 0 0.32px, transparent 0.72px) !important;
+            background-size: 8px 8px, 11px 11px !important;
+            mix-blend-mode: screen !important;
+        }}
         .block-container {{
             padding: 0.55rem 0.75rem !important;
         }}
@@ -1573,6 +1586,13 @@ def inject_chat_shell_css() -> None:
         h1, h2, h3, h4, h5, h6,
         p, label, span, div {{
             letter-spacing: 0 !important;
+            text-wrap: pretty;
+        }}
+        .coach-topbar-title,
+        .coach-brand-title,
+        .coach-insight-head h3,
+        .coach-card-head strong {{
+            text-wrap: balance;
         }}
         .coach-shell-card,
         .coach-goal-card,
@@ -1590,9 +1610,13 @@ def inject_chat_shell_css() -> None:
             background:
                 linear-gradient(180deg, color-mix(in srgb, var(--coach-panel) 94%, var(--coach-text) 3%), var(--coach-panel)) !important;
             border: 1px solid var(--coach-border) !important;
-            box-shadow: var(--coach-shadow) !important;
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, var(--coach-text) 7%, transparent),
+                inset 0 -1px 0 rgba(0,0,0,0.18),
+                var(--coach-shadow) !important;
             backdrop-filter: blur(30px) saturate(1.2) !important;
             -webkit-backdrop-filter: blur(30px) saturate(1.2) !important;
+            outline: 1px solid color-mix(in srgb, var(--coach-text) 2.5%, transparent) !important;
         }}
         .coach-left-rail {{
             margin-bottom: 7px !important;
@@ -1699,6 +1723,11 @@ def inject_chat_shell_css() -> None:
             background: color-mix(in srgb, var(--coach-button) 90%, transparent) !important;
             color: var(--coach-button-text) !important;
             box-shadow: inset 0 1px 0 color-mix(in srgb, var(--coach-text) 5%, transparent) !important;
+            transition:
+                transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+                background 220ms cubic-bezier(0.32, 0.72, 0, 1),
+                border-color 220ms cubic-bezier(0.32, 0.72, 0, 1),
+                box-shadow 220ms cubic-bezier(0.32, 0.72, 0, 1) !important;
         }}
         .stButton > button p,
         .stDownloadButton > button p,
@@ -1722,6 +1751,19 @@ def inject_chat_shell_css() -> None:
             transform: translateY(-1px);
             border-color: var(--coach-border-strong) !important;
         }}
+        .stButton > button:active,
+        .stDownloadButton > button:active,
+        button:active {{
+            transform: translateY(1px) scale(0.985) !important;
+        }}
+        .stButton > button:focus-visible,
+        .stDownloadButton > button:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible {{
+            outline: 2px solid color-mix(in srgb, var(--coach-accent) 56%, transparent) !important;
+            outline-offset: 2px !important;
+        }}
         .stSelectbox label,
         .stTextArea label,
         .stAudioInput label,
@@ -1739,6 +1781,10 @@ def inject_chat_shell_css() -> None:
             background: color-mix(in srgb, var(--coach-panel-3) 94%, transparent) !important;
             border: 1px solid var(--coach-border) !important;
             box-shadow: inset 0 1px 0 color-mix(in srgb, var(--coach-text) 5%, transparent) !important;
+            transition:
+                border-color 220ms cubic-bezier(0.32, 0.72, 0, 1),
+                background 220ms cubic-bezier(0.32, 0.72, 0, 1),
+                box-shadow 220ms cubic-bezier(0.32, 0.72, 0, 1) !important;
         }}
         .coach-goal-card {{
             padding: 10px !important;
@@ -1787,6 +1833,7 @@ def inject_chat_shell_css() -> None:
             border-color: var(--coach-border) !important;
             color: var(--coach-muted) !important;
             font-size: 10px !important;
+            font-variant-numeric: tabular-nums !important;
         }}
         .coach-progress-track {{
             height: 4px !important;
@@ -1835,6 +1882,7 @@ def inject_chat_shell_css() -> None:
             color: var(--coach-accent) !important;
             font-size: 10px !important;
             font-weight: 780 !important;
+            font-variant-numeric: tabular-nums !important;
         }}
         .coach-insight-section {{
             padding: 12px 13px !important;
@@ -2023,6 +2071,11 @@ def inject_chat_shell_css() -> None:
             white-space: normal !important;
             line-height: 1.12 !important;
             overflow-wrap: anywhere !important;
+        }}
+        div[data-testid="stColumn"]:has(.coach-brand-card) .stButton > button[data-testid="stBaseButton-primary"] {{
+            box-shadow:
+                inset 3px 0 0 color-mix(in srgb, var(--coach-primary-text) 42%, transparent),
+                0 10px 24px color-mix(in srgb, var(--coach-primary) 18%, transparent) !important;
         }}
         div[data-testid="stColumn"]:has(.coach-brand-card) label {{
             text-align: left !important;
