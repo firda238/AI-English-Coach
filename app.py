@@ -730,9 +730,23 @@ def load_demo_session(scenario_key: str, scenario: dict, difficulty: str, sessio
     st.toast(f"演示会话已生成：{record_path.name}")
 
 
-def render_ai_voice_reply(reply: str) -> None:
+def render_ai_voice_reply(reply: str, enabled: bool) -> None:
     """Use browser SpeechSynthesis to read the latest AI reply once."""
-    if not reply or not st.session_state.voice_reply_enabled:
+    if not enabled:
+        st.session_state.last_spoken_reply = reply
+        components.html(
+            """
+            <script>
+            if ("speechSynthesis" in window.parent) {
+                window.parent.speechSynthesis.cancel();
+            }
+            </script>
+            """,
+            height=0,
+            width=0,
+        )
+        return
+    if not reply:
         return
     if st.session_state.last_spoken_reply == reply:
         return
@@ -786,7 +800,9 @@ def render_ai_voice_reply(reply: str) -> None:
             if (synth.getVoices().length) {{
                 speakReply();
             }} else {{
-                synth.onvoiceschanged = speakReply;
+                synth.onvoiceschanged = () => {{
+                    if ({json.dumps(enabled)}) speakReply();
+                }};
                 window.parent.setTimeout(speakReply, 300);
             }}
         }}
@@ -1570,7 +1586,6 @@ def main() -> None:
                 average,
             )
             render_latency_panel()
-            render_ai_voice_reply(st.session_state.last_ai_reply)
             render_voice_tools_panel(
                 disabled=round_full,
                 scenario_key=scenario_key,
@@ -1604,6 +1619,7 @@ def main() -> None:
                 st.session_state.input_mode = "text"
             submitted = False
             user_text = st.session_state.input_text
+            voice_reply_enabled = bool(st.session_state.get("voice_reply_enabled", True))
 
             if st.session_state.input_mode == "text":
                 mode_col, answer_col, send_col = st.columns([0.12, 0.70, 0.18])
@@ -1622,7 +1638,7 @@ def main() -> None:
                     )
                     render_enter_submit_bridge()
                 with send_col:
-                    st.toggle(
+                    voice_reply_enabled = st.toggle(
                         "朗读",
                         key="voice_reply_enabled",
                     )
@@ -1650,7 +1666,7 @@ def main() -> None:
                             unsafe_allow_html=True,
                         )
                 with send_col:
-                    st.toggle(
+                    voice_reply_enabled = st.toggle(
                         "朗读",
                         key="voice_reply_enabled",
                     )
@@ -1675,6 +1691,7 @@ def main() -> None:
                                 voice_profile=st.session_state.voice_profile,
                             )
                             st.rerun()
+            render_ai_voice_reply(st.session_state.last_ai_reply, voice_reply_enabled)
             if submitted:
                 bridge_payload = consume_submit_bridge_payload()
                 bridged_text = bridge_payload.get("text", "")
