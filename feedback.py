@@ -290,7 +290,7 @@ def local_ai_reply(
     if next_stage:
         stage_replies.extend(
             [
-                f"Thanks. Now let's move to {next_stage['title']}: {next_stage['prompt']}",
+                f"Thanks. Now let's move to the next part: {next_stage['prompt']}",
                 f"Good. For the next part, {next_stage['prompt']}",
                 f"Let's go deeper. {next_stage['prompt']}",
             ]
@@ -315,7 +315,7 @@ def local_ai_reply(
     if "because" in text or "reason" in text:
         replies.append("That reason is clear. What would be the next action based on it?")
     if stage and stage.get("evaluation_focus"):
-        replies.append(f"Please add more detail. Focus on this point: {stage['evaluation_focus']}")
+        replies.append("Please add more detail and answer the next question naturally.")
 
     difficulty_suffix = {
         "简单": " Please answer in one or two simple sentences.",

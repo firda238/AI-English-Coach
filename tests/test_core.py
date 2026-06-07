@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -210,6 +211,22 @@ def test_restaurant_reply_avoids_recent_duplicate_question(monkeypatch):
 
     assert turn["ai_reply"] != recent_reply
     assert "confirm your order" in turn["ai_reply"]
+
+
+def test_local_ai_reply_uses_english_only_stage_text(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    scenario = get_scenario("interview")
+    turn = build_turn_response(
+        "Hi, my name is Tom. I am a software engineer and I recently worked on a web application project.",
+        scenario,
+        "中等",
+        [],
+        stage={"title": "自我介绍", "evaluation_focus": "背景是否清楚，目标是否具体，句子是否完整。"},
+        next_stage={"title": "项目经历", "prompt": "Could you describe one previous project experience?"},
+    )
+
+    assert not re.search(r"[\u4e00-\u9fff]", turn["ai_reply"])
+    assert "Could you describe one previous project experience?" in turn["ai_reply"]
 
 
 def test_empty_input_validation():
