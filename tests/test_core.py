@@ -33,15 +33,12 @@ class NamedBytesIO(io.BytesIO):
         self.name = name
 
 
-def assert_score_shape(score: dict) -> None:
+def assert_score_shape(score: dict, audio_used: bool = False) -> None:
     assert isinstance(score["total_score"], int)
-    assert set(score["dimensions"]) == {
-        "pronunciation",
-        "fluency",
-        "grammar",
-        "expression",
-        "completeness",
-    }
+    expected_dimensions = {"fluency", "grammar", "expression", "completeness"}
+    if audio_used:
+        expected_dimensions.add("pronunciation")
+    assert set(score["dimensions"]) == expected_dimensions
     for item in score["dimensions"].values():
         assert 0 <= item["score"] <= 100
         assert item["label"]
@@ -64,7 +61,7 @@ def test_all_scenarios_generate_reply_feedback_and_score(monkeypatch, scenario_k
     assert turn["mode"] == "本地演示模式"
     assert turn["ai_reply"]
     assert turn["correction"]["corrected_sentence"]
-    assert turn["correction"]["issue_explanation"]
+    assert "correction_status" in turn["correction"]
     assert_score_shape(turn["score"])
 
 
@@ -99,6 +96,7 @@ def test_score_dimension_shape():
     score = evaluate_speaking("He go", correction["issues"], audio_used=False)
     assert_score_shape(score)
     assert score["voice_profile"]["audio_used"] is False
+    assert "pronunciation" not in score["dimensions"]
 
 
 def test_voice_score_profile_explains_transcription_flow():
@@ -110,7 +108,7 @@ def test_voice_score_profile_explains_transcription_flow():
         voice_profile={"success": True, "engine": "faster-whisper", "confidence_label": "usable"},
     )
 
-    assert_score_shape(score)
+    assert_score_shape(score, audio_used=True)
     assert score["voice_profile"]["audio_used"] is True
     assert score["voice_profile"]["transcript_success"] is True
     assert "语音识别" in score["dimensions"]["pronunciation"]["explanation"]
@@ -132,7 +130,7 @@ def test_voice_score_uses_speech_rate_metrics():
         },
     )
 
-    assert_score_shape(score)
+    assert_score_shape(score, audio_used=True)
     assert score["voice_profile"]["duration_seconds"] == 6.0
     assert score["voice_profile"]["words_per_minute"] == 100
     assert "100 WPM" in score["dimensions"]["fluency"]["explanation"]
@@ -163,6 +161,55 @@ def test_api_json_parsing_and_normalization():
     assert normalized["correction"]["corrected_sentence"] == "I agree with this idea."
     assert normalized["correction"]["has_grammar_errors"]
     assert_score_shape(normalized["score"])
+
+
+def test_api_voice_normalization_keeps_pronunciation_dimension():
+    parsed = {
+        "ai_reply": "Could you give one specific example?",
+        "corrected_sentence": "I agree with this idea.",
+        "issue_explanation": ["Use 'I agree' instead of 'I am agree'."],
+        "natural_expression": "I agree with this idea because it is practical.",
+        "scores": {
+            "pronunciation": {"score": 82, "explanation": "Clear enough for practice."},
+            "fluency": {"score": 78, "explanation": "Some pauses are expected."},
+            "grammar": {"score": 90, "explanation": "Grammar is mostly accurate."},
+            "expression": {"score": 85, "explanation": "Expression is natural."},
+            "completeness": {"score": 80, "explanation": "Add one example."},
+        },
+    }
+    normalized = _normalize_api_turn("I am agree with this idea", parsed, audio_used=True)
+
+    assert_score_shape(normalized["score"], audio_used=True)
+
+
+def test_clean_sentence_has_no_correction_issues():
+    feedback = local_correction(
+        "Yes, I would like something else because dessert will complete my meal."
+    )
+
+    assert not feedback["has_grammar_errors"]
+    assert feedback["issue_explanation"] == []
+    assert "无需修改" in feedback["correction_status"]
+
+
+def test_restaurant_reply_avoids_recent_duplicate_question(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    scenario = get_scenario("restaurant")
+    recent_reply = (
+        "Great choice. Would you like anything else? "
+        "Please give a structured answer with a reason, example, and next step."
+    )
+    turn = build_turn_response(
+        "Yes, I would like a chocolate cake because it will complete my meal.",
+        scenario,
+        "困难",
+        [{"role": "assistant", "content": recent_reply}],
+        stage={"title": "处理偏好", "evaluation_focus": "偏好是否具体，请求是否得体。"},
+        next_stage={"title": "确认订单", "prompt": "Let me confirm your order. Is everything correct?"},
+    )
+
+    assert turn["ai_reply"] != recent_reply
+    assert "confirm your order" in turn["ai_reply"]
 
 
 def test_empty_input_validation():

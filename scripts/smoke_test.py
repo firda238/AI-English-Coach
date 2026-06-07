@@ -31,8 +31,10 @@ class NamedBytesIO(io.BytesIO):
         self.name = name
 
 
-def assert_score_shape(score: dict) -> None:
-    expected_dimensions = {"pronunciation", "fluency", "grammar", "expression", "completeness"}
+def assert_score_shape(score: dict, audio_used: bool = False) -> None:
+    expected_dimensions = {"fluency", "grammar", "expression", "completeness"}
+    if audio_used:
+        expected_dimensions.add("pronunciation")
     assert isinstance(score.get("total_score"), int)
     assert set(score.get("dimensions", {})) == expected_dimensions
     for item in score["dimensions"].values():
@@ -79,7 +81,7 @@ def main() -> None:
                 turn = result["turn"]
                 assert turn["ai_reply"]
                 assert turn["correction"]["corrected_sentence"]
-                assert turn["correction"]["issue_explanation"]
+                assert "correction_status" in turn["correction"]
                 assert_score_shape(turn["score"])
                 conversation_history.append({"role": "user", "content": answer, "stage": result["stage"]["title"]})
                 conversation_history.append(

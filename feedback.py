@@ -235,7 +235,10 @@ def local_correction(user_text: str) -> Dict:
         "original_preview": _preview_text(user_text),
         "corrected_preview": _preview_text(corrected or user_text),
         "has_grammar_errors": bool(issues),
-        "issue_explanation": issues or ["No obvious grammar error was found by the local rule checker."],
+        "issue_explanation": issues,
+        "correction_status": (
+            "已发现需要修改的问题。" if issues else "这句话语法和表达基本正确，无需修改。"
+        ),
         "natural_expression": expression_feedback["natural_expression"],
         "expression_suggestions": expression_feedback["expression_suggestions"],
         "focus_points": expression_feedback["focus_points"],
@@ -283,15 +286,16 @@ def local_ai_reply(
 ) -> str:
     """Generate a varied fallback role-play reply."""
     text = user_text.lower()
-    replies = []
+    stage_replies = []
     if next_stage:
-        replies.extend(
+        stage_replies.extend(
             [
                 f"Thanks. Now let's move to {next_stage['title']}: {next_stage['prompt']}",
                 f"Good. For the next part, {next_stage['prompt']}",
                 f"Let's go deeper. {next_stage['prompt']}",
             ]
         )
+    replies = stage_replies[:]
     replies.extend(scenario["fallback_replies"])
 
     if "project" in text or "experience" in text:
@@ -319,8 +323,35 @@ def local_ai_reply(
         "困难": " Please give a structured answer with a reason, example, and next step.",
     }.get(difficulty, "")
 
-    index = (len(history) + sum(ord(c) for c in user_text)) % len(replies)
-    return replies[index] + difficulty_suffix
+    recent_ai_replies = {
+        _normalize_recent_reply(item.get("content", ""))
+        for item in history[-8:]
+        if item.get("role") == "assistant"
+    }
+    fresh_stage_replies = [
+        reply for reply in stage_replies if _normalize_recent_reply(reply + difficulty_suffix) not in recent_ai_replies
+    ]
+    if fresh_stage_replies:
+        return fresh_stage_replies[0] + difficulty_suffix
+
+    fresh_replies = [
+        reply for reply in replies if _normalize_recent_reply(reply + difficulty_suffix) not in recent_ai_replies
+    ] or replies
+    index = (len(history) + sum(ord(c) for c in user_text)) % len(fresh_replies)
+    return fresh_replies[index] + difficulty_suffix
+
+
+def _normalize_recent_reply(text: str) -> str:
+    """Normalize AI replies so repeated prompts can be filtered reliably."""
+    normalized = re.sub(r"\s+", " ", text.strip().lower())
+    for suffix in [
+        " please answer in one or two simple sentences.",
+        " please add one reason or example.",
+        " please give a structured answer with a reason, example, and next step.",
+    ]:
+        if normalized.endswith(suffix):
+            normalized = normalized[: -len(suffix)].strip()
+    return normalized
 
 
 def _try_openai_turn(
@@ -362,8 +393,8 @@ def _try_openai_turn(
                 "Then provide correction and scoring. Return only one JSON object with keys: "
                 "ai_reply, corrected_sentence, issue_explanation, natural_expression, "
                 "expression_suggestions, focus_points, alternative_expressions, practice_sentences, "
-                "error_tags, scores. scores must include pronunciation, fluency, grammar, "
-                "expression, completeness; each score item must include score and explanation. "
+                "error_tags, scores. scores must include fluency, grammar, expression, and completeness. "
+                "Only include pronunciation when audio_used is true. Each score item must include score and explanation. "
                 "Keep ai_reply under 35 English words. Keep explanations concise and useful for Chinese learners."
             ),
         }
@@ -402,7 +433,7 @@ def _normalize_api_turn(
     corrected_sentence = str(api_result.get("corrected_sentence") or user_text).strip() or user_text
     issue_explanation = _coerce_list(
         api_result.get("issue_explanation"),
-        ["No obvious grammar error was found, but the answer can still be improved for spoken English."],
+        [],
     )
     detected_issues = [
         issue for issue in issue_explanation if not issue.lower().startswith("no obvious grammar error")
@@ -423,7 +454,10 @@ def _normalize_api_turn(
         "original_preview": _preview_text(user_text),
         "corrected_preview": _preview_text(corrected_sentence),
         "has_grammar_errors": bool(detected_issues),
-        "issue_explanation": issue_explanation,
+        "issue_explanation": detected_issues,
+        "correction_status": (
+            "已发现需要修改的问题。" if detected_issues else "这句话语法和表达基本正确，无需修改。"
+        ),
         "natural_expression": str(api_result.get("natural_expression") or corrected_sentence),
         "expression_suggestions": _coerce_list(
             api_result.get("expression_suggestions"),
@@ -439,13 +473,16 @@ def _normalize_api_turn(
 
     raw_scores = api_result.get("scores", {})
     dimensions = {}
-    for key, label in [
+    score_dimension_defs = [
         ("pronunciation", "Pronunciation 发音清晰度"),
         ("fluency", "Fluency 流利度"),
         ("grammar", "Grammar 语法准确度"),
         ("expression", "Expression 表达自然度"),
         ("completeness", "Completeness 回答完整度"),
-    ]:
+    ]
+    if not audio_used:
+        score_dimension_defs = [item for item in score_dimension_defs if item[0] != "pronunciation"]
+    for key, label in score_dimension_defs:
         item = raw_scores.get(key, {}) if isinstance(raw_scores, dict) else {}
         dimensions[key] = {
             "label": label,

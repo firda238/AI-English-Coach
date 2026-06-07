@@ -2575,15 +2575,29 @@ def render_analysis_panel(
         st.session_state.analysis_view = "correction"
 
     if feedback:
+        has_errors = bool(feedback.get("has_grammar_errors"))
         issues = _list_html(feedback.get("issue_explanation", []), limit=2, max_chars=110)
         alternatives = _list_html(feedback.get("alternative_expressions", []), limit=2, max_chars=110)
-        feedback_html = f"""
-          <div class="coach-insight-field"><span>原句</span><p>{esc(_short_text(feedback.get("original_sentence", ""), 160))}</p></div>
-          <div class="coach-insight-field"><span>修改后</span><p>{esc(_short_text(feedback.get("corrected_sentence", ""), 160))}</p></div>
-          <div class="coach-insight-field"><span>错误原因</span>{issues}</div>
-          <div class="coach-insight-field"><span>更自然表达</span><p>{esc(_short_text(feedback.get("natural_expression", ""), 170))}</p></div>
-          <div class="coach-insight-field"><span>替代表达</span>{alternatives}</div>
-        """
+        original = _short_text(feedback.get("original_sentence", ""), 160)
+        corrected = _short_text(feedback.get("corrected_sentence", ""), 160)
+        status = feedback.get("correction_status") or "这句话语法和表达基本正确，无需修改。"
+        correction_fields = [
+            f'<div class="coach-insight-field"><span>原句</span><p>{esc(original)}</p></div>',
+            f'<div class="coach-insight-field"><span>检查结果</span><p>{esc(status)}</p></div>',
+        ]
+        if has_errors and corrected:
+            correction_fields.append(
+                f'<div class="coach-insight-field"><span>修改后</span><p>{esc(corrected)}</p></div>'
+            )
+            correction_fields.append(f'<div class="coach-insight-field"><span>错误原因</span>{issues}</div>')
+        natural_expression = _short_text(feedback.get("natural_expression", ""), 170)
+        if natural_expression and natural_expression != original:
+            correction_fields.append(
+                f'<div class="coach-insight-field"><span>更自然表达</span><p>{esc(natural_expression)}</p></div>'
+            )
+        if has_errors:
+            correction_fields.append(f'<div class="coach-insight-field"><span>替代表达</span>{alternatives}</div>')
+        feedback_html = "".join(correction_fields)
     else:
         feedback_html = """
           <div class="coach-empty coach-insight-empty">
@@ -2596,13 +2610,14 @@ def render_analysis_panel(
         total_score = _safe_score(score.get("total_score"))
         dimensions = score.get("dimensions", {})
         rows = []
+        has_pronunciation = "pronunciation" in dimensions
         for key, fallback_label in DIMENSION_ORDER:
+            if key not in dimensions:
+                continue
             item = dimensions.get(key, {})
             value = _safe_score(item.get("score"))
             label = str(item.get("label") or fallback_label)
-            explanation = "演示发音评分，非真实音素级评测。" if key == "pronunciation" else _short_text(
-                item.get("explanation", ""), 95
-            )
+            explanation = _short_text(item.get("explanation", ""), 95)
             rows.append(
                 f"""
                 <div class="coach-score-line">
@@ -2617,15 +2632,17 @@ def render_analysis_panel(
                 </div>
                 """
             )
+        score_title = "五维评分" if has_pronunciation else "文本评分"
+        score_caption = "Overall Score / 100" if has_pronunciation else "Text Score / 100"
         score_html = (
-            f'<div class="coach-insight-total"><strong>{total_score}</strong><span>Overall Score / 100</span></div>'
+            f'<div class="coach-insight-total"><strong>{total_score}</strong><span>{score_caption}</span></div>'
             f'<div class="coach-score-lines">{"".join(rows)}</div>'
         )
     else:
         score_html = """
           <div class="coach-empty coach-insight-empty">
             <strong>等待评分</strong>
-            <span>完成本轮回答后显示 Overall Score 和五维评分。</span>
+            <span>完成本轮回答后显示评分；语音输入会额外显示发音维度。</span>
           </div>
         """
 
@@ -2677,7 +2694,7 @@ def render_analysis_panel(
     selected = selected or st.session_state.get("analysis_view", "correction")
     detail_map = {
         "correction": ("纠错反馈", feedback_html),
-        "score": ("五维评分", score_html),
+        "score": (score_title if score else "评分", score_html),
         "suggestion": ("下一步建议", suggestion_html),
     }
     title, detail_html = detail_map[selected]
