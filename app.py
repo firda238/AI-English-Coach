@@ -77,6 +77,7 @@ def init_state() -> None:
         "voice_reply_enabled": True,
         "pending_user_input": "",
         "pending_input_clear": False,
+        "pending_competition_mode": False,
         "sidebar_collapsed": False,
         "active_view": "practice",
         "input_text": "",
@@ -116,6 +117,7 @@ def reset_conversation_state() -> None:
     st.session_state.last_spoken_reply = ""
     st.session_state.pending_user_input = ""
     st.session_state.pending_input_clear = False
+    st.session_state.pending_competition_mode = False
     st.session_state.input_text = ""
     st.session_state.recording_status = ""
     st.session_state.latest_suggestion = {}
@@ -520,6 +522,18 @@ def activate_competition_mode() -> None:
     start_practice_session(scenario_key, difficulty, f"{scenario_key}:{difficulty}")
     refresh_latest_suggestion(scenario_key, get_scenario(scenario_key))
     st.toast("目标模式已启动：面试场景、中等难度、AI 朗读开启。")
+
+
+def request_competition_mode() -> None:
+    """Defer target-mode activation until before widgets are instantiated."""
+    st.session_state.pending_competition_mode = True
+
+
+def apply_pending_competition_mode() -> None:
+    if not st.session_state.get("pending_competition_mode"):
+        return
+    st.session_state.pending_competition_mode = False
+    activate_competition_mode()
 
 
 def generate_current_summary(scenario: dict, difficulty: str) -> None:
@@ -1210,99 +1224,107 @@ def render_history_tab() -> None:
     files = list_all_history_files()
     records = load_records(files)
     if not records:
-        st.info("暂无历史记录。完成练习后会自动保存。")
+        with st.expander("历史记录状态", expanded=True):
+            st.info("暂无历史记录。完成练习后会自动保存。")
         return
 
-    scenario_options = ["全部"] + sorted({record.get("scenario", "未知") for record in records})
-    selected_scenario = st.selectbox("按场景筛选", scenario_options, key="history_filter")
-    visible_records = filter_records(records, selected_scenario)
-    st.caption(f"当前显示 {len(visible_records)} / {len(records)} 条记录")
-    if not visible_records:
-        st.warning("该筛选条件下没有记录。")
-        return
+    with st.expander("筛选与选择记录", expanded=True):
+        scenario_options = ["全部"] + sorted({record.get("scenario", "未知") for record in records})
+        selected_scenario = st.selectbox("按场景筛选", scenario_options, key="history_filter")
+        visible_records = filter_records(records, selected_scenario)
+        st.caption(f"当前显示 {len(visible_records)} / {len(records)} 条记录")
+        if not visible_records:
+            st.warning("该筛选条件下没有记录。")
+            return
 
-    selected_record = st.selectbox(
-        "选择记录",
-        visible_records,
-        format_func=lambda record: (
-            f"{record.get('time', '未知时间')} | {record.get('scenario', '未知')} | "
-            f"{record.get('round_count', 1)}轮 | "
-            f"{record.get('overall_score', record.get('score_result', {}).get('total_score', 0))}分"
-        ),
-        key="history_record_select",
-    )
-    left, right = st.columns([1, 1])
-    with left:
-        render_history_record(selected_record)
-        st.download_button(
-            "下载该 JSON 记录",
-            data=Path(selected_record["_path"]).read_text(encoding="utf-8"),
-            file_name=selected_record["_file_name"],
-            mime="application/json",
-            width="stretch",
+        selected_record = st.selectbox(
+            "选择记录",
+            visible_records,
+            format_func=lambda record: (
+                f"{record.get('time', '未知时间')} | {record.get('scenario', '未知')} | "
+                f"{record.get('round_count', 1)}轮 | "
+                f"{record.get('overall_score', record.get('score_result', {}).get('total_score', 0))}分"
+            ),
+            key="history_record_select",
         )
-    with right:
-        correction = selected_record.get("correction_feedback", {})
-        st.write("**纠错摘要**")
-        for issue in correction.get("issue_explanation", []):
-            st.write(f"- {issue}")
-        if selected_record.get("lesson_summary"):
-            st.write("**课后总结预览**")
-            st.markdown(selected_record["lesson_summary"])
+
+    with st.expander("记录详情与下载", expanded=True):
+        left, right = st.columns([1, 1])
+        with left:
+            render_history_record(selected_record)
+            st.download_button(
+                "下载该 JSON 记录",
+                data=Path(selected_record["_path"]).read_text(encoding="utf-8"),
+                file_name=selected_record["_file_name"],
+                mime="application/json",
+                width="stretch",
+            )
+        with right:
+            correction = selected_record.get("correction_feedback", {})
+            st.write("**纠错摘要**")
+            for issue in correction.get("issue_explanation", []):
+                st.write(f"- {issue}")
+            if selected_record.get("lesson_summary"):
+                st.write("**课后总结预览**")
+                st.markdown(selected_record["lesson_summary"])
+
     render_saved_conversation(selected_record)
     render_saved_feedback_and_scores(selected_record)
     render_error_book_panel()
-    confirm_delete = st.checkbox("确认删除所选历史记录", key="confirm_delete_history")
-    if st.button("删除所选记录", disabled=not confirm_delete, type="secondary"):
-        if delete_practice_record(selected_record["_path"]):
-            st.success("历史记录已删除。")
-            st.rerun()
-        st.warning("历史记录删除失败。")
+    with st.expander("删除记录", expanded=False):
+        confirm_delete = st.checkbox("确认删除所选历史记录", key="confirm_delete_history")
+        if st.button("删除所选记录", disabled=not confirm_delete, type="secondary"):
+            if delete_practice_record(selected_record["_path"]):
+                st.success("历史记录已删除。")
+                st.rerun()
+            st.warning("历史记录删除失败。")
 
 
 def render_analytics_tab() -> None:
     render_section_intro("学习数据统计", "用练习次数、分数趋势、场景分布和高频问题观察学习进展。")
     records = load_records(list_all_history_files())
     if not records:
-        st.info("暂无统计数据。完成几次练习后可查看趋势。")
+        with st.expander("数据状态", expanded=True):
+            st.info("暂无统计数据。完成几次练习后可查看趋势。")
         return
 
     summary = summarize_records(records)
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("练习次数", summary["total_records"])
-    col2.metric("平均分", summary["average_score"])
-    col3.metric("最高分", summary["best_score"])
-    col4.metric("已生成总结", summary["summary_count"])
+    with st.expander("数据总览", expanded=True):
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("练习次数", summary["total_records"])
+        col2.metric("平均分", summary["average_score"])
+        col3.metric("最高分", summary["best_score"])
+        col4.metric("已生成总结", summary["summary_count"])
 
     trend = score_trend(records)
     if trend:
-        st.markdown("**分数趋势**")
-        st.line_chart(pd.DataFrame(trend).set_index("time")["score"])
+        with st.expander("分数趋势", expanded=True):
+            st.line_chart(pd.DataFrame(trend).set_index("time")["score"])
 
     scenario_rows = [{"scenario": key, "count": value} for key, value in summary["scenario_counts"].items()]
     if scenario_rows:
-        st.markdown("**场景练习分布**")
-        st.bar_chart(pd.DataFrame(scenario_rows).set_index("scenario")["count"])
+        with st.expander("场景练习分布", expanded=False):
+            st.bar_chart(pd.DataFrame(scenario_rows).set_index("scenario")["count"])
 
     averages = dimension_averages(records)
     if averages:
-        st.markdown("**五维平均分**")
-        st.dataframe(
-            pd.DataFrame(
-                [{"dimension": key, "average_score": value} for key, value in averages.items()]
-            ),
-            width="stretch",
-            hide_index=True,
-        )
+        with st.expander("五维平均分", expanded=False):
+            st.dataframe(
+                pd.DataFrame(
+                    [{"dimension": key, "average_score": value} for key, value in averages.items()]
+                ),
+                width="stretch",
+                hide_index=True,
+            )
 
     errors = error_frequency(records)
     if errors:
-        st.markdown("**高频问题**")
-        st.dataframe(
-            pd.DataFrame([{"issue": key, "count": value} for key, value in errors.items()]),
-            width="stretch",
-            hide_index=True,
-        )
+        with st.expander("高频问题", expanded=False):
+            st.dataframe(
+                pd.DataFrame([{"issue": key, "count": value} for key, value in errors.items()]),
+                width="stretch",
+                hide_index=True,
+            )
 
 
 def render_report_tab() -> None:
@@ -1310,60 +1332,69 @@ def render_report_tab() -> None:
     records = load_records(list_all_history_files())
     summaries = [record for record in records if record.get("lesson_summary")]
     source_options = ["当前会话总结"] + summaries
-    source = st.selectbox(
-        "选择报告来源",
-        source_options,
-        format_func=lambda item: item if isinstance(item, str) else f"{item.get('time', '未知时间')} | {item.get('scenario', '未知')}",
-    )
+    with st.expander("报告来源", expanded=True):
+        source = st.selectbox(
+            "选择报告来源",
+            source_options,
+            format_func=lambda item: item if isinstance(item, str) else f"{item.get('time', '未知时间')} | {item.get('scenario', '未知')}",
+        )
     if isinstance(source, str):
         markdown = st.session_state.latest_summary
     else:
         markdown = source.get("lesson_summary", "")
 
-    if not markdown:
-        st.info("暂无可导出的总结。请先在练习中心生成课后总结。")
-        return
-
-    st.markdown(markdown)
-    col1, col2 = st.columns(2)
-    col1.download_button(
-        "下载 Markdown",
-        data=markdown.encode("utf-8"),
-        file_name="lesson_summary.md",
-        mime="text/markdown",
-        width="stretch",
-    )
-    if col2.button("生成 HTML 报告", width="stretch"):
-        path = save_html_report(markdown)
-        st.session_state.latest_html_path = str(path)
-        st.success(f"HTML 报告已保存：{path.name}")
-    if st.session_state.latest_html_path:
-        html_path = Path(st.session_state.latest_html_path)
-        if html_path.exists():
-            st.download_button(
-                "下载 HTML 报告",
-                data=html_path.read_text(encoding="utf-8").encode("utf-8"),
-                file_name=html_path.name,
-                mime="text/html",
-                width="stretch",
-            )
+    with st.expander("报告预览", expanded=True):
+        if markdown:
+            st.markdown(markdown)
+        else:
+            st.info("暂无可导出的总结。请先在练习中心生成课后总结。")
+    with st.expander("导出操作", expanded=True):
+        if not markdown:
+            st.caption("生成课后总结后，这里会显示 Markdown 和 HTML 导出按钮。")
+            return
+        col1, col2 = st.columns(2)
+        col1.download_button(
+            "下载 Markdown",
+            data=markdown.encode("utf-8"),
+            file_name="lesson_summary.md",
+            mime="text/markdown",
+            width="stretch",
+        )
+        if col2.button("生成 HTML 报告", width="stretch"):
+            path = save_html_report(markdown)
+            st.session_state.latest_html_path = str(path)
+            st.success(f"HTML 报告已保存：{path.name}")
+        if st.session_state.latest_html_path:
+            html_path = Path(st.session_state.latest_html_path)
+            if html_path.exists():
+                st.download_button(
+                    "下载 HTML 报告",
+                    data=html_path.read_text(encoding="utf-8").encode("utf-8"),
+                    file_name=html_path.name,
+                    mime="text/html",
+                    width="stretch",
+                )
 
 
 def render_settings_tab(mode_label: str) -> None:
     render_section_intro("运行设置与说明", "查看 API、语音转写和自动化测试命令。")
-    st.write(f"**当前模式：** {mode_label}")
     speech_status = get_speech_runtime_status()
-    st.write("**项目定位：** 比赛成品原型，重点展示多轮场景训练、语音识别、教练反馈和学习报告。")
-    st.write("**目标模式：** 左侧一键进入面试中等难度，自动开场并开启 AI 追问朗读，适合现场展示。")
-    st.write("**语音模式：** Coach Voice Lab 支持浏览器听写自动提交、录音转写和音频上传；AI 追问可由浏览器朗读。")
-    st.write(f"**语音识别引擎：** {speech_status['engine']}，模型：{speech_status['model_size']}。")
-    st.write("**延迟指标：** 每轮展示识别耗时、AI 回复耗时和端到端总延迟，便于说明语音闭环流畅性。")
-    st.write("**语音边界：** 当前不是全双工实时通话；Pronunciation 为本地估算评分，真实音素级评测可作为下一阶段增强。")
-    st.write("**API dry-run：** `python scripts/check_api.py`")
-    st.write("**API live 测试：** `python scripts/check_api.py --live`")
-    st.write("**本地语音转写测试：** `WHISPER_MODEL_SIZE=tiny.en python scripts/test_transcription.py`")
-    st.write("**完整自动化测试：** `pytest -q && python scripts/smoke_test.py`")
-    st.info("无 API Key 时系统保持本地演示模式；API 调用失败时会自动回退到本地逻辑。")
+    with st.expander("当前模式与项目定位", expanded=True):
+        st.write(f"**当前模式：** {mode_label}")
+        st.write("**项目定位：** 比赛成品原型，重点展示多轮场景训练、语音识别、教练反馈和学习报告。")
+        st.write("**目标模式：** 左侧一键进入面试中等难度，自动开场并开启 AI 追问朗读，适合现场展示。")
+    with st.expander("语音能力与边界", expanded=True):
+        st.write("**语音模式：** Coach Voice Lab 支持浏览器听写自动提交、录音转写和音频上传；AI 追问可由浏览器朗读。")
+        st.write(f"**语音识别引擎：** {speech_status['engine']}，模型：{speech_status['model_size']}。")
+        st.write("**延迟指标：** 每轮展示识别耗时、AI 回复耗时和端到端总延迟，便于说明语音闭环流畅性。")
+        st.write("**语音边界：** 当前不是全双工实时通话；Pronunciation 为本地估算评分，真实音素级评测可作为下一阶段增强。")
+    with st.expander("测试命令", expanded=False):
+        st.write("**API dry-run：** `python scripts/check_api.py`")
+        st.write("**API live 测试：** `python scripts/check_api.py --live`")
+        st.write("**本地语音转写测试：** `WHISPER_MODEL_SIZE=tiny.en python scripts/test_transcription.py`")
+        st.write("**完整自动化测试：** `pytest -q && python scripts/smoke_test.py`")
+    with st.expander("运行提示", expanded=False):
+        st.info("无 API Key 时系统保持本地演示模式；API 调用失败时会自动回退到本地逻辑。")
 
 
 def configure_browser_behavior() -> None:
@@ -1401,6 +1432,7 @@ def configure_browser_behavior() -> None:
 def main() -> None:
     st.set_page_config(page_title="AI 英语口语陪练", page_icon="🎙️", layout="wide")
     init_state()
+    apply_pending_competition_mode()
     configure_browser_behavior()
     inject_chat_shell_css()
 
@@ -1438,6 +1470,7 @@ def main() -> None:
                 width="stretch",
             ):
                 st.session_state.active_view = view_key
+                st.rerun()
 
         scenario_key = st.session_state.selected_scenario
         scenario = get_scenario(scenario_key)
@@ -1481,7 +1514,7 @@ def main() -> None:
 
         if st.session_state.active_view == "practice":
             if st.button("目标模式", type="primary", width="stretch", key="side_competition_mode"):
-                activate_competition_mode()
+                request_competition_mode()
                 st.rerun()
             side_start, side_demo = st.columns(2)
             if side_start.button(
